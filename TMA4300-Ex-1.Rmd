@@ -1,5 +1,5 @@
 --- 
-title: 'TMA4300 Computer Intensive Statistical Methods Exercise 1'
+title: 'TMA4300 Computer Intensive Statistical Methods Exercise 1, Spring 2019'
 output:
   pdf_document:
     toc: yes
@@ -21,3 +21,20 @@ opts_chunk$set(tidy.opts = list(width.cutoff = 68), tidy = TRUE, warning = FALSE
 ```
 
 # Problem A: Stochastic simulation by the probability integral transform and bivariate techniques
+## 1.
+We make a function that draws $n$ random numbers from an exponential distribution with parameter $\lambda$. If $u$ is uniformly distributed between 0 and 1, $u\sim U(0,1)$, then $x=-\log(u)/\lambda $ will be exponentially distributed with parameter $\lambda$, or $x\sim \text{Exp}(\lambda)$.
+```{r, echo = T, eval = T}
+exponential<- function(lambda, n){
+  u = runif(n)
+  x = -1/lambda*log(u)
+  return(x)
+}
+n = 100000
+lambda = 1
+y = rexp(n, lambda)
+x = exponential(lambda,n)
+mean(x)
+mean(y)
+var(x)
+var(y)
+```
