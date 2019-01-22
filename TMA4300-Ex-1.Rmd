@@ -52,7 +52,7 @@ ggplot(df, aes(value, fill = type)) +
    geom_histogram(alpha = 0.5, aes(y = ..density..), binwidth = 0.05, position = 'identity') + ggtitle("Our function vs. R function densities")
 df2 <- data.frame(theo=seq(0,max(x),length.out=n), value=x)
 h <- ggplot(df2, aes(x = value))
-h <- h + geom_histogram(aes(y = ..density..), binwidth=0.05) +stat_function(fun=dexp,geom = "line",size=1.6,col="red",args = (mean=lambda))
+h <- h + geom_histogram(aes(y = ..density..), binwidth=0.05, fill = 'blue', color = 'blue') +stat_function(fun=dexp,geom = "line",size=1.6,col="red",args = (mean=lambda))
 h <- h + ggtitle("Our function vs. theoretical density")
 h
 ```
@@ -60,45 +60,140 @@ h
 ## 2. a)
 We first note that the normalizing constant will be $c=\frac{e\alpha}{e+\alpha}$, which can be found by solving $$\int_0^{\infty} g(x)dx = 1.$$
 
-We find the cumulative distribution by noting that $F_X(x) = P(X\leq x)$, which gives 
-$$F_X(x) = \int_0^x g(\xi)d\xi = \begin{cases} \int_0^x c\xi^{\alpha-1}d\xi = \frac{cx^{\alpha}}{\alpha}, \quad &0\leq x\leq 1,\\ \frac{c}{\alpha}+\int_1^x c\exp(-\xi)d\xi = \frac{c}{\alpha}+\frac{c}{e}-c\exp(-x), \quad &1\leq x,\\0, &\text{otherwise}.\end{cases}$$
-With the inverse
-$$F_X^{-1}(u) = \begin{cases} \frac{\alpha}{c}u, \quad 0 \leq u<\frac{c}{\alpha} \\
--ln(\frac{1}{\alpha} + \frac{1}{e} - \frac{u}{c}), \quad \frac{c}{\alpha} \leq u \leq 1,
-\end{cases}
-$$
-which we can use to sample from $f(x)$. We confirm this by sampling from $u \sim U[0, 1]$, computing the inverse $X = F^{-1}_X(u)$ and plotting a histogram over the results.
-
-```{r}
-f_A2 = function(c, x, alpha){
+We find the cumulative distribution by noting that $G_X(x) = P(X\leq x)$, which gives 
+$$G_X(x) = \int_0^x g(\xi)d\xi = \begin{cases} \int_0^x c\xi^{\alpha-1}d\xi = \frac{cx^{\alpha}}{\alpha}, \quad &0\leq x\leq 1,\\ \frac{c}{\alpha}+\int_1^x c\exp(-\xi)d\xi = \frac{c}{\alpha}+\frac{c}{e}-c\exp(-x), \quad &1\leq x,\\0, &\text{otherwise}.\end{cases}$$
+Because $c=\frac{e\alpha}{e+\alpha}$, we have that $c/\alpha + c/e=1$, giving
+$$G_X(x) = \begin{cases} \frac{cx^{\alpha}}{\alpha}, \quad &0\leq x\leq 1,\\ 1-c\exp(-x), \quad &1\leq x,\\0, &\text{otherwise}.\end{cases}$$
+Then we take the inverse of this function to obtain
+$$G_X^{-1}(u) = \begin{cases} (\frac{\alpha}{c}u)^{1/\alpha}, \quad &0 \leq u<\frac{e}{\alpha+e}, \\
+\ln(\frac{c}{1-u}), \quad &\frac{e}{\alpha+e} \leq u \leq 1.
+\end{cases}$$
+This can be used to sample from $g(x)$. To confirm this, we sample from $u\sim U(0,1)$ and compute the inverse $X = G^{-1}_X(u)$. Then our claim is that $X \sim g(x)$. We start by computing the analytical mean of our distribution and compare this with the mean of the drawn sample. We find the mean by
+$$\text{E}(X) = \int_0^{\infty} xg(x)dx = \frac{c}{\alpha+1} + \frac{2c}{e}.$$
+We compare results in R.
+```{r, echo = T, eval = T}
+f_A2 = function(x, alpha){
+  c = alpha*exp(1)/(alpha+exp(1))
   result = vector(length = length(x))
   result[x<1.] = sapply(x[x<1.], function(x) c*x^(alpha - 1))
   result[x>=1.] = sapply(x[x>=1.], function(x) c*exp(-x))
-  return(as.vector(result))
+  return(result)
 }
 
-F_inv = function(c, u, alpha){
-  result = vector(length = length(u))
+F_inv = function(n, alpha){
+  c = alpha*exp(1)/(alpha+exp(1))
+  u = runif(n)
+  result = vector(length = n)
   result[u < c/alpha] = (alpha/c * u[u < c/alpha])^(1/alpha)
   result[u >= c/alpha] = -log(1/alpha + exp(-1) - u[u >= c/alpha]/c)
   return(result)
 }
 
-alpha = 2
-c = exp(1)*alpha / (exp(1) + alpha)
-usamples = runif(n=1000000)
-xsamples = F_inv(c, usamples, alpha)
-histogram = hist(xsamples, breaks=20, probability=T, plot=F)
-
-x_val = linspace(0, max(xsamples), 100)
-
-plot(histogram$mids, histogram$density, ylim=c(0., 1.), col="blue", xlab = "x", ylab="P(x)")
-lines(x_val, f_A2(c, x_val, alpha), type='l', col="red")
-legend(x="topright", .95, legend=c("Analytic", "Inverse sampling"), col=c('red', 'blue'), lty=1, cex=0.8)
+alpha = 2.5
+n = 10000
+xsamples = F_inv(n, alpha)
+c = alpha*exp(1)/(alpha+exp(1))
+mean = c/(alpha+1) + 2*c/exp(1)
+cat('Theoretical mean: ', mean, ' Sampled mean: ', mean(xsamples))
+```
+Then we compute the theoretical variance by $\text{Var}(X) = \text{E}(X^2)-\text{E}(X)^2$ and compare it with the sampled variance. The theoretical variance will be
+$$\text{Var}(X) = \text{E}(X^2) - \text{E}(X)^2 = \frac{c}{\alpha+2}+\frac{5c}{e} - \big(\frac{c}{\alpha+1} + \frac{2c}{e}\big)^2.$$
+We compare results in R
+```{r, echo = T, eval = T}
+variance = c/(alpha+2)+5*c/exp(1) - mean^2
+cat('Theoretical variance: ', variance, ' Sampled variance: ', var(xsamples))
 ```
 
-We see that the analytical expression overlaps perfectly with the histogram over the samples, confirming the our algorithm is correct. 
 
+Finally we plot a histogram of the sample and compare it to the density function $g(x)$.
+%```{r, echo = T, eval = T}
+%histogram = hist(xsamples, breaks=20, probability=T, plot=F)
+
+%x_val = seq(0, max(xsamples), length.out = 1000)
+
+%plot(histogram$mids, histogram$density, ylim=c(0., 1.), col="blue", xlab = "x", ylab="P(x)")
+%lines(x_val, f_A2(x_val, alpha), type='l', col="red")
+%legend(x="topright", .95, legend=c("Analytic", "Inverse sampling"), col=c('red', 'blue'), %lty=c(1,NA),pch=c(NA,'o'), cex=0.8)
+%```
+```{r, echo = T, eval = T}
+df2 <- data.frame(theo=seq(0,max(xsamples),length.out=n), value=xsamples)
+h <- ggplot(df2, aes(x = value))
+h <- h + geom_histogram(aes(y = ..density..), binwidth=0.1, col = 'blue', fill = 'blue') +stat_function(fun=f_A2,geom = "line",size=1.6,col="red",args = (mean=alpha))
+h <- h + ggtitle("Comparison of analytical and sampled density")
+h
+```
+
+We see that the analytical expression overlaps perfectly with the histogram over the samples, confirming the our algorithm is correct.
+
+## 3.
+To simulate from the standard normal distribution, we implement a function that performs the Box-Müller transformation. Given $x_1 \sim U(0,1)$ and $x_2 \sim \text{Exp}(1/2)$, we have that $y_1 = \sqrt{x_2}\cos{(2\pi x_1)}$ and $y_2 = \sqrt{x_2}\sin{(2\pi x_1)}$ will be i.i.d. standard normal. To sample from the exponential distribution, we use the `exponential` function implemented earlier. The following function implements the Box-Müller transformation to generate $n$ independent samples from the standard normal distribution. To reduce runtime of the algorithm, we assume $n$ to be an even number, so that we can generate only $n/2$ samples from the uniform and exponential distributions and use both $y_1$ and $y_2$.
+```{r, echo = T, eval = T}
+normal <- function(n){
+  x_1 <- runif(n/2)
+  x_2 <- exponential(1/2, n/2)
+  y_1 <- sqrt(x_2)*cos(2*pi*x_1)
+  y_2 <- sqrt(x_2)*sin(2*pi*x_1)
+  y <- c(y_1,y_2)
+  return(y)
+}
+```
+
+Then we want to verify the algorithm, so we compute the mean and variance of the sample.
+```{r, echo = T, eval = T}
+n = 100000
+x <- normal(n)
+cat('Theoretical mean: ', 0,' Computed mean: ', mean(x),'\n')
+cat('Theoretical variance: ', 1, ' Computed variance: ', var(x))
+```
+We see that the computed mean and variance coincide with the theoretical mean and variance of 0 and 1. 
+
+Finally we make a histogram of our sample and compare it with the analytical density of the standard normal distribution. In addition, we provide a Q-Q plot to check normality of the data.
+
+```{r, echo = T, eval = T}
+df2 <- data.frame(theo=seq(0,max(x),length.out=n), value=x)
+h <- ggplot(df2, aes(x = value))
+h <- h + geom_histogram(aes(y = ..density..), binwidth=0.1, col = 'blue', fill = 'blue') +stat_function(fun=dnorm,geom = "line",size=1.6,col="red",args = list(mean=0, sd = 1))
+h <- h + ggtitle("Comparison of analytical and sampled density")
+h
+x <- normal(1000)
+qqnorm(x, pch = 1, frame = FALSE)
+qqline(x, col = "steelblue", lwd = 2)
+```
+Also here, the histogram coincides well with the standard normal density function, so we conclude that our algorithm is correct. Lastly, the sampled points in the Q-Q plot coincide with the theoretical line.
+
+## 4.
+We now implement a function that generates samples from a $d$-variate normal distribution with mean vector $\mu$ and covariance matrix $\Sigma$. We use the function `normal`, which we created in task A.3. to generate $d$ i.i.d. standard normal samples. Then we use the transformation $y = \mu + Ax \sim N(\mu, A A^T)$, with $AA^T=\Sigma$ and $x$ being a vector with the independent standard normal samples. We use the Cholesky decomposition for A.
+```{r, echo = T, eval = T}
+normal_d <- function(d, mu, sigma){
+  x <- normal(d)
+  y <- mu + t(chol(sigma))%*%x
+  return(y)
+}
+```
+
+Then, we draw samples from a $d$-variate distribution to check our results. We use
+$$\mu = \begin{pmatrix} 1 \\ 2 \end{pmatrix}, \quad \Sigma = \begin{pmatrix} 2.5 & 3.0 \\ 3.0 & 10.0\end{pmatrix}.$$
+We check if the generated sample has the correct mean vector and covariance matrix to see if the generated sample truly is $d$-variate normal.
+```{r, echo = T, eval = T}
+d = 2
+n = 100000
+mu = c(1,2)
+sigma = matrix(c(2.5,3,3,10),ncol=2,nrow=2)
+sample = matrix(rep(1,d*n), ncol = d, nrow = n)
+for (i in 1:n){
+  sample[i,] <- normal_d(d,mu,sigma)
+}
+average = apply(sample, 2,mean)
+average
+covmat = cov(sample)
+covmat
+```
+Both the mean vector and the covariance matrix coincide well with the theoretical mean and covariance.
+
+```{r, echo = T, eval = T}
+library(MVN)
+x = mvn(sample)
+```
 # Problem B: The gamma distribution
 
 We can sample from the gamma distribution 
