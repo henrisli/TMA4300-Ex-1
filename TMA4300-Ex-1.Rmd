@@ -190,17 +190,20 @@ covmat
 ```
 Both the mean vector and the covariance matrix coincide well with the theoretical mean and covariance.
 
+Finally we implement an Anderson-Darling normality test to check the normality of the data.
 ```{r, echo = T, eval = T}
-library(MVN)
-x = mvn(sample)
+library(nortest)
+ad.test(sample)
 ```
+We get a p-value of $<2.2\cdot 10^{-16}$, which rejects the hypothesis that the data is not normal distributed, and we conclude that our algorithm is correct.
+
 # Problem B: The gamma distribution
 
 We can sample from the gamma distribution 
 
 $$ f(x) = \begin{cases}
-\frac{1}{\Gamma(\alpha)}x^{\alpha-1}e^{-x} \\
-0, \quad \text{otherwise}. \\
+\frac{1}{\Gamma(\alpha)}x^{\alpha-1}e^{-x}, \quad & 0<x,\\
+0, \quad &\text{otherwise}. \\
 \end{cases} $$
 
 
