@@ -22,19 +22,42 @@ opts_chunk$set(tidy.opts = list(width.cutoff = 68), tidy = TRUE, warning = FALSE
 
 # Problem A: Stochastic simulation by the probability integral transform and bivariate techniques
 ## 1.
-We make a function that draws $n$ random numbers from an exponential distribution with parameter $\lambda$. If $u$ is uniformly distributed between 0 and 1, $u\sim U(0,1)$, then $x=-\log(u)/\lambda $ will be exponentially distributed with parameter $\lambda$, or $x\sim \text{Exp}(\lambda)$.
+We make a function that draws $n$ random numbers from an exponential distribution with parameter $\lambda$. If $u$ is uniformly distributed between 0 and 1, $u\sim U(0,1)$, then $x=-\log(u)/\lambda$ will be exponentially distributed with parameter $\lambda$, or $x\sim \text{Exp}(\lambda)$.
 ```{r, echo = T, eval = T}
+library(ggplot2)
 exponential<- function(lambda, n){
   u = runif(n)
   x = -1/lambda*log(u)
   return(x)
 }
-n = 100000
-lambda = 1
+```
+Then we want to check if this function is correct. To do this, we check a few things. Firstly we compare the mean and variance of a sample drawn from our function with the theoretical mean and variance. The theoretical mean and variance of a exponential distribution are $\mu = 1/\lambda$ and $\sigma^2 = 1/\lambda^2$. We draw a sample with $\lambda = 4.300$ and compare:
+```{r, echo = T, eval = T}
+n = 10000
+lambda = 4.300
 y = rexp(n, lambda)
 x = exponential(lambda,n)
-mean(x)
-mean(y)
-var(x)
-var(y)
+cat('Theoretical mean: ', 1/lambda,' Computed mean: ', mean(x),'\n')
+cat('Theoretical variance: ', 1/lambda^2, ' Computed variance: ', var(x))
 ```
+We see that they are almost the same. Finally we make two plots. The first is a histogram comparison of our function and the R function `rexp()`, which draws random samples from an exponential distribution. The second plot is a histogram of our random sample compared with the theoretical exponential distribution.
+```{r, echo = T, eval = T}
+rfunc = data.frame(value = y)
+ourfunc = data.frame(value = x)
+rfunc$type = 'R function'
+ourfunc$type = 'Our function'
+df = rbind(rfunc,ourfunc)
+ggplot(df, aes(value, fill = type)) + 
+   geom_histogram(alpha = 0.5, aes(y = ..density..), binwidth = 0.05, position = 'identity') + ggtitle("Our function vs. R function densities")
+df2 <- data.frame(theo=seq(0,max(x),length.out=n), value=x)
+h <- ggplot(df2, aes(x = value))
+h <- h + geom_histogram(aes(y = ..density..), binwidth=0.05) +stat_function(fun=dexp,geom = "line",size=1.6,col="red",args = (mean=lambda))
+h <- h + ggtitle("Our function vs. theoretical density")
+h
+```
+
+## 2. a)
+We first note that the normalizing constant will be $c=\frac{e\alpha}{e+\alpha}$, which can be found by solving $$\int_0^{\infty} g(x)dx = 1.$$
+
+We find the cumulative distribution by noting that $F_X(x) = P(X\leq x)$, which gives 
+$$F_X(x) = \int_0^x g(\xi)d\xi = \begin{cases} \int_0^x c\xi^{\alpha-1}d\xi = \frac{cx^{\alpha}}{\alpha}, \quad &0\leq x\leq 1,\\ \frac{c}{\alpha}+\int_1^x c\exp(-\xi)d\xi = \frac{c}{\alpha}+\frac{c}{e}-c\exp(-x), \quad &1\leq x,\\0, &\text{otherwise}.\end{cases}$$
