@@ -62,9 +62,42 @@ We first note that the normalizing constant will be $c=\frac{e\alpha}{e+\alpha}$
 
 We find the cumulative distribution by noting that $F_X(x) = P(X\leq x)$, which gives 
 $$F_X(x) = \int_0^x g(\xi)d\xi = \begin{cases} \int_0^x c\xi^{\alpha-1}d\xi = \frac{cx^{\alpha}}{\alpha}, \quad &0\leq x\leq 1,\\ \frac{c}{\alpha}+\int_1^x c\exp(-\xi)d\xi = \frac{c}{\alpha}+\frac{c}{e}-c\exp(-x), \quad &1\leq x,\\0, &\text{otherwise}.\end{cases}$$
+With the inverse
+$$F_X^{-1}(u) = \begin{cases} \frac{\alpha}{c}u, \quad 0 \leq u<\frac{c}{\alpha} \\
+-ln(\frac{1}{\alpha} + \frac{1}{e} - \frac{u}{c}), \quad \frac{c}{\alpha} \leq u \leq 1,
+\end{cases}
+$$
+which we can use to sample from $f(x)$. We confirm this by sampling from $u \sim U[0, 1]$, computing the inverse $X = F^{-1}_X(u)$ and plotting a histogram over the results.
 
+```{r}
+f_A2 = function(c, x, alpha){
+  result = vector(length = length(x))
+  result[x<1.] = sapply(x[x<1.], function(x) c*x^(alpha - 1))
+  result[x>=1.] = sapply(x[x>=1.], function(x) c*exp(-x))
+  return(as.vector(result))
+}
 
+F_inv = function(c, u, alpha){
+  result = vector(length = length(u))
+  result[u < c/alpha] = (alpha/c * u[u < c/alpha])^(1/alpha)
+  result[u >= c/alpha] = -log(1/alpha + exp(-1) - u[u >= c/alpha]/c)
+  return(result)
+}
 
+alpha = 2
+c = exp(1)*alpha / (exp(1) + alpha)
+usamples = runif(n=1000000)
+xsamples = F_inv(c, usamples, alpha)
+histogram = hist(xsamples, breaks=20, probability=T, plot=F)
+
+x_val = linspace(0, max(xsamples), 100)
+
+plot(histogram$mids, histogram$density, ylim=c(0., 1.), col="blue", xlab = "x", ylab="P(x)")
+lines(x_val, f_A2(c, x_val, alpha), type='l', col="red")
+legend(x="topright", .95, legend=c("Analytic", "Inverse sampling"), col=c('red', 'blue'), lty=1, cex=0.8)
+```
+
+We see that the analytical expression overlaps perfectly with the histogram over the samples, confirming the our algorithm is correct. 
 
 # Problem B: The gamma distribution
 
@@ -77,20 +110,15 @@ $$ f(x) = \begin{cases}
 
 
 
-using the distribution found in A.2 as a proposal distribution. We can do this because the A.2 distribution is nonzero at all point where $f(x)$ is nonzero
+using the distribution found in A.2 as a proposal distribution. We can do this because the A.2 distribution is nonzero at all points where $f(x)$ is nonzero
 
 ```{r}
 library(pracma)
-f_A2 = function(c, x, alpha){
-  result = vector(length = length(x))
-  result[x<1] = sapply(x[x<1], function(x) c*x^(alpha - 1))
-  result[x>=1] = sapply(x[x>=1], function(x) c*exp(-x))
-  return(result)
-}
 
 x = linspace(0, 10, 100)
-y_gamma = dgamma(x, 3)
+y_gamma = dgamma(x, shape=3, rate=2)
 y_prop = f_A2(1, x, 3)
+
 
 plot1 = plot(x, y_gamma, col='red', type='l', ylab="", ylim = c(0., 1.))
 lines(x, y_prop, type='l', col='blue')
@@ -101,12 +129,28 @@ We note that the acceptance probabiltiy, P_{accept},
 $$P_{accept} = \int_0^{\infty} P_{unif}(U \leq \frac{f(x)}{c g(x)} ) P_{prop}(X = x) \\
  = \int_0^{\infty} \frac{f(x)}{c g(x)} g(x) = c^{-1}$$
 
+We sample from $X \sim g(x)$ and $U \sim u[0, 1]$, and accept the sample $x$ if $u \leq \frac{f(x)}{c g(x)}$.
+
 ```{r}
-sample_f = function(size=1, f){
-  uniform = runif(size=length(x))
+
+c = 10
+alpha = 1
+sample_gamma = function(size=1000){
+  uniform1 = runif(size)
+  uniform2 = runif(size)
+  x = F_inv(c, uniform1, alpha)
   
+  print(as.matrix(f_A2(1, x, alpha)))
+  
+  probs = dgamma(x, 3, 2) * f_A2(c, x, alpha)
+  return(x[uniform2 < probs])
 }
-  
+
+
+uniform1 = runif(1000)
+uniform2 = runif(1000)
+x = F_inv(c, uniform1, alpha)
+f_A2(c, x, alpha)
 ```
 
 =======
