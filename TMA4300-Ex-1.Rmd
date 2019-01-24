@@ -63,6 +63,7 @@ We first note that the normalizing constant will be $c=\frac{e\alpha}{e+\alpha}$
 We find the cumulative distribution by noting that $G_X(x) = P(X\leq x)$, which gives 
 $$G_X(x) = \int_0^x g(\xi)d\xi = \begin{cases} \int_0^x c\xi^{\alpha-1}d\xi = \frac{cx^{\alpha}}{\alpha}, \quad &0\leq x\leq 1,\\ \frac{c}{\alpha}+\int_1^x c\exp(-\xi)d\xi = \frac{c}{\alpha}+\frac{c}{e}-c\exp(-x), \quad &1\leq x,\\0, &\text{otherwise}.\end{cases}$$
 Because $c=\frac{e\alpha}{e+\alpha}$, we have that $c/\alpha + c/e=1$, giving
+
 $$G_X(x) = \begin{cases} \frac{cx^{\alpha}}{\alpha}, \quad &0\leq x\leq 1,\\ 1-c\exp(-x), \quad &1\leq x,\\0, &\text{otherwise}.\end{cases}$$
 Then we take the inverse of this function to obtain
 $$G_X^{-1}(u) = \begin{cases} (\frac{\alpha}{c}u)^{1/\alpha}, \quad &0 \leq u<\frac{e}{\alpha+e}, \\
@@ -193,96 +194,85 @@ We get a p-value of $<2.2\cdot 10^{-16}$, which rejects the hypothesis that the 
 
 # Problem B: The gamma distribution
 
-We can sample from the gamma distribution 
+We can sample from the gamma distribution with $\alpha \in (0, 1)$ and $\beta = 1$,
 
 $$ f(x) = \begin{cases}
 \frac{1}{\Gamma(\alpha)}x^{\alpha-1}e^{-x}, \quad & 0<x,\\
 0, \quad &\text{otherwise}. \\
 \end{cases} $$
 
-using the distribution found in A.2 as a proposal distribution. We can do this because the A.2 distribution is nonzero at all points where $f(x)$ is nonzero
+using the distribution found in A.2 as a proposal distribution. We can do this because the A.2 distribution is nonzero at all points where $f(x)$ is nonzero. 
 
 ```{r, echo = T, eval = T}
 library(pracma)
 
-x = linspace(0, 10, 100)
+x = linspace(0, 3, 100)
+alpha = 0.5
+y_gamma = dgamma(x, shape=alpha, rate=1)
+y_prop = 1/(gamma(alpha)) * (1/alpha + exp(-1))*f_A2(x, alpha)
 
-y_gamma = dgamma(x, shape=1, rate=1)
-y_prop = f_A2(1, x, 1)
+df10 = data.frame(x, y_gamma, y_prop)
+h <- ggplot(data.frame(x, y_gamma, y_prop))
+h = h + geom_line(aes(x = x, y = y_gamma, colour="Gamma"), size=1.)
+h = h + geom_line(aes(x = x, y = y_prop, color="Proposal"), size=1.)
+h = h + ggtitle(paste("Gamma(",toString(alpha),", 1) vs. proposal"))
+h
 
-
-
-plot1 = plot(x, y_gamma, col='red', type='l', ylab="", ylim = c(0., 1.))
-lines(x, y_prop, type='l', col='blue')
-legend(x="topright", .95, legend=c("Gamma", "Proposal"), col=c('red', 'blue'), lty=1, cex=0.8)
 ```
+
 We note that the acceptance probabiltiy, P_{accept}, 
 
 $$P_{accept} = \int_0^{\infty} P_{unif}(U \leq \frac{f(x)}{c g(x)} ) P_{prop}(X = x) \\
- = \int_0^{\infty} \frac{f(x)}{c g(x)} g(x) = c^{-1}$$
+ = \int_0^{\infty} \frac{f(x)}{c g(x)} g(x) = c^{-1},$$
+ 
+To maximize the acceptance probability, we can minimize $c$ by choosing
 
-We sample from $X \sim g(x)$ and $U \sim u[0, 1]$, and accept the sample $x$ if $u \leq \frac{f(x)}{c g(x)}$.
+$$ c = \underset{x}{\sup} \frac{f(x)}{g(x)} = \underset{x}{\sup} \begin{cases}
+\frac{e^{-x}(\frac{1}{\alpha} + \frac{1}{e})}{\Gamma(\alpha)}, \quad 0 \leq x \le 1 \\
+\frac{x^{\alpha - 1} (\frac{1}{\alpha} + \frac{1}{e})}{\Gamma(\alpha)}, \quad 1 \leq x
+\end{cases}$$ 
 
-<<<<<<< HEAD
+Which means $c = \frac{(\frac{1}{\alpha} + \frac{1}{e})}{\Gamma(\alpha)}$
+
+To generate $n$ samples from $f(x)$ we sample from $X \sim g(x)$ and $U \sim u[0, 1]$, and accept the sample $x$ if $u \leq \frac{f(x)}{c g(x)}$. We repeat the process until $n$ samples are accepted. 
+
+We compare the sample mean and variance with the theoretical mean and variance and compare the sampled density with the theoretical density. 
+
 ```{r}
-
+library(pracma)
 c = 1
-alpha = 1
+alpha = 0.5
 rate = 1
 
-f_A2 = function(c, x, alpha){
-  result = vector(mode='double', length = length(x))
-  result[x<1.] = sapply(x[x<1.], function(x) c*x^(alpha - 1), USE.NAMES=F)
-  #print(x[x>=1.])
-  if (!all(x<1.)){
-    #print(x[x>=1.])
-    result[x>=1.] = sapply(x[x>=1.], function(x) c*exp(-x), USE.NAMES=F)
-  }
-  return(result)
-}
-
 sample_gamma = function(n=1000){
-  uniform1 = runif(n)
   uniform2 = runif(n)
-  x = F_inv(c, uniform1, alpha)
-  probs = dgamma(x, alpha, rate) / (c * f_A2(c, x, alpha))
+  x = F_inv(n, alpha)
+  c = 1/(gamma(alpha)) * (1/alpha + exp(-1))
+  
+  probs = dgamma(x, alpha, rate) / (c * f_A2(x, alpha))
   return(x[uniform2 <= probs])
 }
 
-g_samples = sample_gamma(10000)
+g_samples <- sample_gamma(1000000)
+g_samples_filt <- g_samples[g_samples < 5]
+df12 = data.frame(x = g_samples_filt)
 
-histogram2 = hist(g_samples, breaks=10, probability=T, plot=T)
+cat('Theoretical mean: ', alpha,' Computed mean: ', mean(g_samples),'\n')
+cat('Theoretical variance: ', alpha, ' Computed variance: ', var(g_samples))
 
-
-FÅR IKKJE MED HALEN HER FOR SOME REASON
+c = 1/(gamma(alpha)) * (1/alpha + exp(-1))
 
 x_val = linspace(0, 5, 100)
-plot(histogram2$mids, histogram2$density, ylim=c(0., 1.0))
-lines(x_val, dgamma(x_val, alpha, rate), type='l')
 
+df11 <- data.frame(x = x_val, y=dgamma(x_val, alpha, rate))
 
+h <- ggplot()
+h <- h + geom_line(data=df11, aes(x=x, y=y, color="Theoretical"), size=1.6)
+h <- h + geom_histogram(data=df12, aes(x=x, y=..density.., color="Sampled"), binwidth=0.1, col = 'blue', fill = 'blue') 
+h <- h + ggtitle("Comparison of analytical and sampled density")
+h
 ```
-=======
-%```{r, echo = T, eval = T}
-%c = 10
-%alpha = 1
-%sample_gamma = function(size=1000){
-%  uniform1 = runif(size)
-%  uniform2 = runif(size)
-%  x = F_inv(uniform1, alpha)
-%  
-%  print(as.matrix(f_A2(x, alpha)))
-%  
-%  probs = dgamma(x, 3, 2) * f_A2(x, alpha)
-%  return(x[uniform2 < probs])
-%}
-%
 
-%uniform1 = runif(1000)
-%uniform2 = runif(1000)
-%x = F_inv(uniform1, alpha)
-%f_A2(x, alpha)
-%```
->>>>>>> bd7cb04b12c3454df13e2751f35c76ab2f6ccb82
+As we remove the limitation on $\alpha$, we no longer get a closed form expression of $c$. To sample from the Gamma with parameters $\alpha > 1$, $\beta = 1$, we can use the ratio of uniforms method
 
-=======
+
