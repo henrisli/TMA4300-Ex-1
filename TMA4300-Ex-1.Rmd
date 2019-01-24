@@ -26,7 +26,7 @@ opts_chunk$set(tidy.opts = list(width.cutoff = 68), tidy = TRUE, warning = FALSE
 We make a function that draws $n$ random numbers from an exponential distribution with parameter $\lambda$. If $u$ is uniformly distributed between 0 and 1, $u\sim U(0,1)$, then $x=-\log(u)/\lambda$ will be exponentially distributed with parameter $\lambda$, or $x\sim \text{Exp}(\lambda)$.
 ```{r, echo = T, eval = T}
 library(ggplot2)
-exponential<- function(lambda, n){
+exponential<- function(lambda, n=1){
   u = runif(n)
   x = -1/lambda*log(u)
   return(x)
@@ -276,3 +276,44 @@ h
 As we remove the limitation on $\alpha$, we no longer get a closed form expression of $c$. To sample from the Gamma with parameters $\alpha > 1$, $\beta = 1$, we can use the ratio of uniforms method
 
 
+
+# Problem C: The Dirichlet distribution: simulation using known relations
+
+## 1.
+We assume $z_k\sim \Gamma(\alpha_k,1)$ for $k=1,\ldots,K$ independently, and define $x_k = z_k/(z_1+\dots+z_K)$ for $k=1,\ldots,K$. Then we want to find the distribution of $x= (x_1,\ldots,x_K)$. We use a transformation of the joint distribution of $z = (z_1,\ldots,z_K)$ to $(x_1,\ldots,x_{K-1},v), v = z_1+\dots+z_K$. The inverse transformation will be $z_k = vx_k, k = 1,\ldots,K$, which has a Jacobian
+$$\lvert J \rvert = \begin{vmatrix}\frac{\partial z_1}{\partial x_1}  & \dots & \frac{\partial z_1}{\partial x_{K-1}} & \frac{\partial z_1}{\partial v}\\ \vdots &  \ddots & \vdots & \vdots \\ \frac{\partial z_K}{\partial x_1} & \dots & \frac{\partial z_K}{\partial x_{K-1}}&\frac{\partial z_K}{\partial v} \end{vmatrix} = \begin{vmatrix}v&0  & \dots & 0 & x_1\\ 0&v&\dots & 0 & x_2\\\vdots &\vdots&  \ddots & \vdots & \vdots \\0 & 0& \dots&v&x_{K-1}\\ -v &-v& \dots & -v&1-\sum_{k=1}^{K-1}x_k  \end{vmatrix} = v^{K-1}.$$
+Then, we note that the joint distribution of $z_k, k = 1,\ldots,K$ will be
+$$F_{z_1,\ldots,z_K}(z_1,\ldots,z_K) = \prod_{k=1}^K \frac{1}{\Gamma(\alpha_k)}z_k^{\alpha_k-1}\exp(-z_k)=\prod_{k=1}^K \bigg(\frac{1}{\Gamma(\alpha_k)}z_k^{\alpha_k-1}\bigg)\exp(-\sum_{k=1}^K z_k).$$
+Now, we do the transformation with $z_k = vx_k, k = 1,\ldots,K-1$ and $v = z_1+\dots+z_K$ to get
+\begin{align*}F_{x_1,\ldots,x_{K-1},v}(x_1,\ldots,x_{K-1},v) &= \prod_{k=1}^{K-1} \bigg(\frac{1}{\Gamma(\alpha_k)}(vx_k)^{\alpha_k-1}\bigg)\cdot\frac{1}{\Gamma(\alpha_K)}(v\big(1-\sum_{k=1}^{K-1}x_k\big))^{\alpha_K-1}\exp(-v)v^{K-1}\\
+&= \prod_{k=1}^{K}\bigg(\frac{1}{\Gamma(\alpha_k)}\bigg)v^{\big(\sum_{k=1}^K\alpha_k\big)-1}\exp(-v)\bigg(\prod_{k=1}^{K-1}x_k^{\alpha_k-1}\bigg)\bigg(1-\sum_{k=1}^{K-1}x_k\bigg)^{\alpha_K-1}.
+\end{align*}
+
+Finally, we want to find the marginal distribution of $F_{x_1,\ldots,x_{K-1}}(x_1,\ldots,x_{K-1})$, so we integrate out $v$. The variable $v=z_1+\dots+z_k$ is a sum of Gamma distributed variables, so it can vary between 0 and $\infty$. We note that the Gamma function is defined by
+$$\Gamma(z) = \int_0^\infty \exp(-x)x^{z-1}dx,$$
+which gives $$\int_0^\infty \exp(-v)v^{\big(\sum_{k=1}^K\alpha_k\big)-1}dv = \Gamma(\sum_{k=1}^K\alpha_k),$$
+and in total we have
+$$ F_{x_1,\ldots,x_{K-1}}(x_1,\ldots,x_{K-1})=\bigg(\frac{\Gamma(\sum_{k=1}^K\alpha_k)}{\prod_{k=1}^{K}\Gamma(\alpha_k)}\bigg)\bigg(\prod_{k=1}^{K-1}x_k^{\alpha_k-1}\bigg)\bigg(1-\sum_{k=1}^{K-1}x_k\bigg)^{\alpha_K-1}.$$
+We also know that $\sum_{k=1}^Kx_k=1$, $x_1,\ldots,x_{K-1}>0$ and $\sum_{k=1}^{K-1}x_k<1$, which means that $x=(x_1,\ldots,x_K)$ will be Dirichlet distributed.
+
+## 2.
+Now we want to implement a function that draws one realization from the Dirichlet distribution with parameter vector $(\alpha_1,\ldots,\alpha_K)$. We do so in the following code.
+```{r, echo = T, eval = T}
+library(MCMCpack)
+dirichlet <- function(alpha){
+  z<- sapply(alpha,gamma)
+  x <- z/sum(z)
+  return(x)
+}
+n = 100000
+alpha <- matrix(rep(1,n),ncol = n, nrow = 1)
+x <- dirichlet(alpha)
+y <- as.vector(rdirichlet(1,rep(1,n)))
+rfunc = data.frame(value = y)
+ourfunc = data.frame(value = x)
+rfunc$type = 'R function'
+ourfunc$type = 'Our function'
+df = rbind(rfunc,ourfunc)
+ggplot(df, aes(value, fill = type)) + 
+   geom_histogram(alpha = 0.5, aes(y = ..density..), position = 'identity') + ggtitle("Our function vs. R function densities")
+```
