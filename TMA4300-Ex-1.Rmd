@@ -71,10 +71,10 @@ which we can use to sample from $f(x)$. We confirm this by sampling from $u \sim
 
 ```{r}
 f_A2 = function(c, x, alpha){
-  result = vector(length = length(x))
-  result[x<1.] = sapply(x[x<1.], function(x) c*x^(alpha - 1))
-  result[x>=1.] = sapply(x[x>=1.], function(x) c*exp(-x))
-  return(as.vector(result))
+  result = vector(mode='double', length = length(x))
+  result[x<1.] = sapply(x[x<1.], function(x) c*x^(alpha - 1), USE.NAMES=F)
+  result[x>=1.] = sapply(x[x>=1.], function(x) c*exp(-x), USE.NAMES=F)
+  return(result)
 }
 
 F_inv = function(c, u, alpha){
@@ -88,7 +88,7 @@ alpha = 2
 c = exp(1)*alpha / (exp(1) + alpha)
 usamples = runif(n=1000000)
 xsamples = F_inv(c, usamples, alpha)
-histogram = hist(xsamples, breaks=20, probability=T, plot=F)
+histogram = hist(xsamples, breaks=40, probability=T, plot=F)
 
 x_val = linspace(0, max(xsamples), 100)
 
@@ -116,8 +116,8 @@ using the distribution found in A.2 as a proposal distribution. We can do this b
 library(pracma)
 
 x = linspace(0, 10, 100)
-y_gamma = dgamma(x, shape=3, rate=2)
-y_prop = f_A2(1, x, 3)
+y_gamma = dgamma(x, shape=1, rate=1)
+y_prop = f_A2(1, x, 1)
 
 
 plot1 = plot(x, y_gamma, col='red', type='l', ylab="", ylim = c(0., 1.))
@@ -133,24 +133,41 @@ We sample from $X \sim g(x)$ and $U \sim u[0, 1]$, and accept the sample $x$ if 
 
 ```{r}
 
-c = 10
+c = 1
 alpha = 1
-sample_gamma = function(size=1000){
-  uniform1 = runif(size)
-  uniform2 = runif(size)
-  x = F_inv(c, uniform1, alpha)
-  
-  print(as.matrix(f_A2(1, x, alpha)))
-  
-  probs = dgamma(x, 3, 2) * f_A2(c, x, alpha)
-  return(x[uniform2 < probs])
+rate = 1
+
+f_A2 = function(c, x, alpha){
+  result = vector(mode='double', length = length(x))
+  result[x<1.] = sapply(x[x<1.], function(x) c*x^(alpha - 1), USE.NAMES=F)
+  #print(x[x>=1.])
+  if (!all(x<1.)){
+    #print(x[x>=1.])
+    result[x>=1.] = sapply(x[x>=1.], function(x) c*exp(-x), USE.NAMES=F)
+  }
+  return(result)
 }
 
+sample_gamma = function(n=1000){
+  uniform1 = runif(n)
+  uniform2 = runif(n)
+  x = F_inv(c, uniform1, alpha)
+  probs = dgamma(x, alpha, rate) / (c * f_A2(c, x, alpha))
+  return(x[uniform2 <= probs])
+}
 
-uniform1 = runif(1000)
-uniform2 = runif(1000)
-x = F_inv(c, uniform1, alpha)
-f_A2(c, x, alpha)
+g_samples = sample_gamma(10000)
+
+histogram2 = hist(g_samples, breaks=10, probability=T, plot=T)
+
+
+FÅR IKKJE MED HALEN HER FOR SOME REASON
+
+x_val = linspace(0, 5, 100)
+plot(histogram2$mids, histogram2$density, ylim=c(0., 1.0))
+lines(x_val, dgamma(x_val, alpha, rate), type='l')
+
+
 ```
 
 =======
