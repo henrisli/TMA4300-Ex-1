@@ -36,13 +36,13 @@ Then we want to check if this function is correct. To do this, we check a few th
 ```{r, echo = T, eval = T}
 n = 10000
 lambda = 4.300
-y = rexp(n, lambda)
 x = exponential(lambda,n)
 cat('Theoretical mean: ', 1/lambda,' Computed mean: ', mean(x),'\n')
 cat('Theoretical variance: ', 1/lambda^2, ' Computed variance: ', var(x))
 ```
 We see that they are almost the same. Finally we make two plots. The first is a histogram comparison of our function and the R function `rexp()`, which draws random samples from an exponential distribution. The second plot is a histogram of our random sample compared with the theoretical exponential distribution.
 ```{r, echo = T, eval = T}
+y = rexp(n, lambda)
 rfunc = data.frame(value = y)
 ourfunc = data.frame(value = x)
 rfunc$type = 'R function'
@@ -300,15 +300,21 @@ We also know that $\sum_{k=1}^Kx_k=1$, $x_1,\ldots,x_{K-1}>0$ and $\sum_{k=1}^{K
 Now we want to implement a function that draws one realization from the Dirichlet distribution with parameter vector $(\alpha_1,\ldots,\alpha_K)$. We do so in the following code.
 ```{r, echo = T, eval = T}
 library(MCMCpack)
-dirichlet <- function(alpha){
-  z<- sapply(alpha,gamma)
-  x <- z/sum(z)
-  return(x)
+#dirichlet <- function(alpha){
+#  z<- sapply(alpha,gamma)
+#  x <- z/sum(z)
+#  return(x)
+#}
+Gamma <- function(alpha){
+  return(rgamma(1,alpha))
 }
-n = 100000
+n = 10000
+
+#alpha <- matrix(exponential(0.001,n),ncol = n, nrow = 1)
 alpha <- matrix(rep(1,n),ncol = n, nrow = 1)
-x <- dirichlet(alpha)
-y <- as.vector(rdirichlet(1,rep(1,n)))
+z <- sapply(alpha, Gamma)
+x <- z/sum(z)
+y <- as.vector(rdirichlet(1,alpha[1,]))
 rfunc = data.frame(value = y)
 ourfunc = data.frame(value = x)
 rfunc$type = 'R function'
@@ -316,4 +322,15 @@ ourfunc$type = 'Our function'
 df = rbind(rfunc,ourfunc)
 ggplot(df, aes(value, fill = type)) + 
    geom_histogram(alpha = 0.5, aes(y = ..density..), position = 'identity') + ggtitle("Our function vs. R function densities")
+#IMPLEMENTER VARIANS OG MEAN VS THEORETICAL
+
+```
+
+```{r, echo = T, eval = T}
+df2 <- data.frame(theo=seq(0,max(x),length.out=n), value=x)
+h <- ggplot(df2, aes(x = value))
+h <- h + geom_histogram(aes(y = ..density..), binwidth = 0.000005,fill = 'blue', color = 'blue') +stat_function(fun=dbeta,geom = "line",size=1.6,col="red",args = list(shape1=1,shape2=n-1))
+h <- h + ggtitle("Our function vs. theoretical density")
+h
+#MARGINAL DENSITY OF DIRICHLET IS BETA DISTRIBUTION
 ```
