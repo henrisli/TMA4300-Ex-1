@@ -305,32 +305,53 @@ library(MCMCpack)
 #  x <- z/sum(z)
 #  return(x)
 #}
+```
+We want to test if the function draws from the correct distribution. To do so, we first check the mean and variance of a generated sample. From theory, it is known that if $(x_1,\ldots,x_K)\sim \text{Dirichlet}(\alpha_1,\ldots,\alpha_K)$, then
+$$\text{E}(X_k) = \frac{\alpha_k}{\alpha_0}, \quad \text{Var}(X_i) = \frac{\alpha_i(\alpha_0-\alpha_i)}{\alpha_0^2(\alpha_0+1)}, \quad \alpha_0 = \sum_{i=1}^K \alpha_i.$$
+To determine $(\alpha_1,\ldots,\alpha_k)$, we simulate them from an exponential distribution with $\lambda = 1$ to ensure that all $\alpha$ are positive. We then compare sample mean and variance with theoretical mean and variance for a sample with $k=5$.
+```{r, echo = T, eval = T}
 Gamma <- function(alpha){
   return(rgamma(1,alpha))
 }
-n = 10000
+k = 5
+n = 100000
+x <- matrix(NA, ncol = k, nrow = n)
+alpha <- exponential(1,k)
+for (i in 1:n){
+  z <- sapply(alpha, Gamma)
+  x[i,] <- z/sum(z)
+}
+cat('Theoretical mean: ', alpha/sum(alpha),'\n','Computed mean: ', apply(x,2,mean),'\n')
+cat('Theoretical variance: ', alpha*(sum(alpha)-alpha)/(sum(alpha)^2*(sum(alpha)+1)),'\n', 'Computed variance: ', apply(x,2,var))
+```
+We see that the mean and variance coincide well for all $x_k$. To further confirm that our implementation is correct, we compare a sample drawn from our function with the already implemented R function `rdirichlet` from the `MCMCpack` library. For simplicity, we let all $\alpha_k=1$, so each $x_k$ has the same marginal distribution. We then make a histogram of all $x_k$ from the two samples.
 
-#alpha <- matrix(exponential(0.001,n),ncol = n, nrow = 1)
-alpha <- matrix(rep(1,n),ncol = n, nrow = 1)
-z <- sapply(alpha, Gamma)
-x <- z/sum(z)
-y <- as.vector(rdirichlet(1,alpha[1,]))
+```{r, echo = T, eval = T}
+n <- 50000
+alpha <- rep(1,k)
+x <- matrix(NA, ncol = k, nrow = n)
+
+for (i in 1:n){
+  z <- sapply(alpha, Gamma)
+  x[i,] <- z/sum(z)
+}
+y <- as.vector(rdirichlet(n,alpha))
 rfunc = data.frame(value = y)
-ourfunc = data.frame(value = x)
+ourfunc = data.frame(value = as.vector(x))
 rfunc$type = 'R function'
 ourfunc$type = 'Our function'
 df = rbind(rfunc,ourfunc)
 ggplot(df, aes(value, fill = type)) + 
    geom_histogram(alpha = 0.5, aes(y = ..density..), position = 'identity') + ggtitle("Our function vs. R function densities")
-#IMPLEMENTER VARIANS OG MEAN VS THEORETICAL
-
 ```
+Also here, the histograms coincide well. As a final test, we plot a histogram of our generated sample and compare it with the theoretical density function. Because the Dirichlet distribution is a multivariate distribution, we only investigate the marginal distribution of $x_1$, and it can be shown that the marginal distribution of any $x_k$ is the Beta distribution with parameters $\alpha_k$ and $\sum_{i\neq k}\alpha_i$. This means that we can plot the density of $x_1$ from our generated sample and compare it with a Beta distribution density. Again, for simplicity we assume all $\alpha_k=1$.
 
 ```{r, echo = T, eval = T}
-df2 <- data.frame(theo=seq(0,max(x),length.out=n), value=x)
-h <- ggplot(df2, aes(x = value))
-h <- h + geom_histogram(aes(y = ..density..), binwidth = 0.000005,fill = 'blue', color = 'blue') +stat_function(fun=dbeta,geom = "line",size=1.6,col="red",args = list(shape1=1,shape2=n-1))
-h <- h + ggtitle("Our function vs. theoretical density")
-h
-#MARGINAL DENSITY OF DIRICHLET IS BETA DISTRIBUTION
+df2 <- data.frame(theo=seq(0,max(x[,1]),length.out=n), value=x[,1])
+ggplot(df2, aes(x = value)) + geom_histogram(aes(y = ..density..), 
+      binwidth = 0.005,fill = 'blue', color = 'blue') + stat_function(fun=dbeta,geom = "line",size=1.6,col="red",args = list(shape1=1,shape2=k-1)) + ggtitle("Our function vs. theoretical density")
 ```
+
+The histogram fits the theoretical density well, and we conclude that we have implemented the function to generate Dirichlet samples correctly.
+
+# Problem D: Rejection sampling and importance sampling
