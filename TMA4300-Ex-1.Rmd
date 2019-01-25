@@ -469,17 +469,14 @@ ggplot(df2, aes(x = value)) + geom_histogram(aes(y = ..density..),
 The histogram fits the theoretical density well, and we conclude that we have implemented the function to generate Dirichlet samples correctly.
 
 # Problem D: Rejection sampling and importance sampling
+
+## 1.
 ```{r, echo = T, eval = T}
 f <- function(x){
   return((2+x)^125*(1-x)^38*x^34)
 }
-g <- function(x){
-  return(f(x)*x)
-}
-n_c <- integrate(f,0,1)
-x_optim = optimize(f,c(0,1),maximum = TRUE)
-#c = f(x_optim$maximum)/n_c$value
-c = f(x_optim$maximum)
+
+optimum = optimize(f,c(0,1),maximum = TRUE)
 
 draw_samples <- function(n){
   samples <- rep(NA,n)
@@ -489,8 +486,7 @@ draw_samples <- function(n){
     while(finish ==0){
       iter = iter + 1
       x_sample <- runif(1)
-      #alpha <- 1/c*f(x_sample)/n_c$value
-      alpha <- 1/c*f(x_sample)
+      alpha <- f(x_sample)/optimum$objective
       u = runif(1)
       if (u <=alpha){
         samples[i] <- x_sample
@@ -501,8 +497,23 @@ draw_samples <- function(n){
   return(list(samples = samples, iterations = iter))
 }
 
-y <- draw_samples(100000)
-sum(y$samples)/n
-x_optim$maximum
-cat("Theoretical mean: ", integrate(g,0,1)$value/n_c$value)
+
+```
+
+```{r, echo 0 T, eval = T}
+n = 10000
+g <- function(x){
+  return(f(x)*x)
+}
+f_density <- function(x){return(f(x)/integrate(f,0,1)$value)}
+y <- draw_samples(n)
+cat("Computed mean: ", sum(y$samples)/n, '\n')
+cat("Theoretical mean: ", integrate(g,0,1)$value/integrate(f,0,1)$value, '\n')
+df <- data.frame(theo=seq(0,1,length.out=n), value=y$samples)
+ggplot(df, aes(x = value)) + geom_histogram(aes(y = ..density..), binwidth=0.001, col = 'blue', fill = 'blue') + stat_function(fun=f_density,geom = "line",size=1.6,col="red") + ggtitle("Comparison of analytical and sampled density") + xlim(0,1) + geom_segment(x = sum(y$samples)/n, xend = sum(y$samples)/n, y = 0, yend = 100, col = "green", size = 1.2, linetype = "longdash")
+```
+
+```{r, echo = T, eval = T}
+cat("Average random numbers generated: ", y$iterations/n, '\n')
+cat("Theoretical expected number: ", optimum$objective/integrate(f,0,1)$value)
 ```
