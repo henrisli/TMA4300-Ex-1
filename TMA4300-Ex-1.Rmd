@@ -26,7 +26,7 @@ opts_chunk$set(tidy.opts = list(width.cutoff = 68), tidy = TRUE, warning = FALSE
 We make a function that draws $n$ random numbers from an exponential distribution with parameter $\lambda$. If $u$ is uniformly distributed between 0 and 1, $u\sim U(0,1)$, then $x=-\log(u)/\lambda$ will be exponentially distributed with parameter $\lambda$, or $x\sim \text{Exp}(\lambda)$.
 ```{r, echo = T, eval = T}
 library(ggplot2)
-exponential<- function(lambda, n){
+exponential<- function(lambda, n=1){
   u = runif(n)
   x = -1/lambda*log(u)
   return(x)
@@ -36,13 +36,13 @@ Then we want to check if this function is correct. To do this, we check a few th
 ```{r, echo = T, eval = T}
 n = 10000
 lambda = 4.300
-y = rexp(n, lambda)
 x = exponential(lambda,n)
 cat('Theoretical mean: ', 1/lambda,' Computed mean: ', mean(x),'\n')
 cat('Theoretical variance: ', 1/lambda^2, ' Computed variance: ', var(x))
 ```
 We see that they are almost the same. Finally we make two plots. The first is a histogram comparison of our function and the R function `rexp()`, which draws random samples from an exponential distribution. The second plot is a histogram of our random sample compared with the theoretical exponential distribution.
 ```{r, echo = T, eval = T}
+y = rexp(n, lambda)
 rfunc = data.frame(value = y)
 ourfunc = data.frame(value = x)
 rfunc$type = 'R function'
@@ -146,10 +146,8 @@ Finally we make a histogram of our sample and compare it with the analytical den
 
 ```{r, echo = T, eval = T}
 df2 <- data.frame(theo=seq(0,max(x),length.out=n), value=x)
-h <- ggplot(df2, aes(x = value))
-h <- h + geom_histogram(aes(y = ..density..), binwidth=0.1, col = 'blue', fill = 'blue') +stat_function(fun=dnorm,geom = "line",size=1.6,col="red",args = list(mean=0, sd = 1))
-h <- h + ggtitle("Comparison of analytical and sampled density")
-h
+ggplot(df2, aes(x = value)) + geom_histogram(aes(y = ..density..), binwidth=0.1, col = 'blue', fill = 'blue') + stat_function(fun=dnorm,geom = "line",size=1.6,col="red",args = list(mean=0, sd = 1)) + ggtitle("Comparison of analytical and sampled density")
+
 x <- normal(1000)
 qqnorm(x, pch = 1, frame = FALSE)
 qqline(x, col = "steelblue", lwd = 2)
@@ -174,23 +172,26 @@ d = 2
 n = 100000
 mu = c(1,2)
 sigma = matrix(c(2.5,3,3,10),ncol=2,nrow=2)
-sample = matrix(rep(1,d*n), ncol = d, nrow = n)
+sample = matrix(NA, ncol = d, nrow = n)
 for (i in 1:n){
   sample[i,] <- normal_d(d,mu,sigma)
 }
 average = apply(sample, 2,mean)
+cat('Mean vector: \n')
 average
 covmat = cov(sample)
+cat('Covariance matrix: \n')
 covmat
 ```
 Both the mean vector and the covariance matrix coincide well with the theoretical mean and covariance.
 
-Finally we implement an Anderson-Darling normality test to check the normality of the data.
+Finally we implement an Anderson-Darling normality test to check the normality of the data. We check that each of the two elements are normal.
 ```{r, echo = T, eval = T}
 library(nortest)
-ad.test(sample)
+ad.test(sample[,1])
+ad.test(sample[,2])
 ```
-We get a p-value of $<2.2\cdot 10^{-16}$, which rejects the hypothesis that the data is not normal distributed, and we conclude that our algorithm is correct.
+Both p-values are above any reasonable significance level, which does not reject the hypothesis that the data is normal distributed, and we conclude that our algorithm is correct.
 
 # Problem B: The gamma distribution
 
@@ -387,3 +388,82 @@ h
 ```
 
 
+
+# Problem C: The Dirichlet distribution: simulation using known relations
+
+## 1.
+We assume $z_k\sim \Gamma(\alpha_k,1)$ for $k=1,\ldots,K$ independently, and define $x_k = z_k/(z_1+\dots+z_K)$ for $k=1,\ldots,K$. Then we want to find the distribution of $x= (x_1,\ldots,x_K)$. We use a transformation of the joint distribution of $z = (z_1,\ldots,z_K)$ to $(x_1,\ldots,x_{K-1},v), v = z_1+\dots+z_K$. The inverse transformation will be $z_k = vx_k, k = 1,\ldots,K$, which has a Jacobian
+$$\lvert J \rvert = \begin{vmatrix}\frac{\partial z_1}{\partial x_1}  & \dots & \frac{\partial z_1}{\partial x_{K-1}} & \frac{\partial z_1}{\partial v}\\ \vdots &  \ddots & \vdots & \vdots \\ \frac{\partial z_K}{\partial x_1} & \dots & \frac{\partial z_K}{\partial x_{K-1}}&\frac{\partial z_K}{\partial v} \end{vmatrix} = \begin{vmatrix}v&0  & \dots & 0 & x_1\\ 0&v&\dots & 0 & x_2\\\vdots &\vdots&  \ddots & \vdots & \vdots \\0 & 0& \dots&v&x_{K-1}\\ -v &-v& \dots & -v&1-\sum_{k=1}^{K-1}x_k  \end{vmatrix} = v^{K-1}.$$
+Then, we note that the joint distribution of $z_k, k = 1,\ldots,K$ will be
+$$F_{z_1,\ldots,z_K}(z_1,\ldots,z_K) = \prod_{k=1}^K \frac{1}{\Gamma(\alpha_k)}z_k^{\alpha_k-1}\exp(-z_k)=\prod_{k=1}^K \bigg(\frac{1}{\Gamma(\alpha_k)}z_k^{\alpha_k-1}\bigg)\exp(-\sum_{k=1}^K z_k).$$
+Now, we do the transformation with $z_k = vx_k, k = 1,\ldots,K-1$ and $v = z_1+\dots+z_K$ to get
+\begin{align*}F_{x_1,\ldots,x_{K-1},v}(x_1,\ldots,x_{K-1},v) &= \prod_{k=1}^{K-1} \bigg(\frac{1}{\Gamma(\alpha_k)}(vx_k)^{\alpha_k-1}\bigg)\cdot\frac{1}{\Gamma(\alpha_K)}(v\big(1-\sum_{k=1}^{K-1}x_k\big))^{\alpha_K-1}\exp(-v)v^{K-1}\\
+&= \prod_{k=1}^{K}\bigg(\frac{1}{\Gamma(\alpha_k)}\bigg)v^{\big(\sum_{k=1}^K\alpha_k\big)-1}\exp(-v)\bigg(\prod_{k=1}^{K-1}x_k^{\alpha_k-1}\bigg)\bigg(1-\sum_{k=1}^{K-1}x_k\bigg)^{\alpha_K-1}.
+\end{align*}
+
+Finally, we want to find the marginal distribution of $F_{x_1,\ldots,x_{K-1}}(x_1,\ldots,x_{K-1})$, so we integrate out $v$. The variable $v=z_1+\dots+z_k$ is a sum of Gamma distributed variables, so it can vary between 0 and $\infty$. We note that the Gamma function is defined by
+$$\Gamma(z) = \int_0^\infty \exp(-x)x^{z-1}dx,$$
+which gives $$\int_0^\infty \exp(-v)v^{\big(\sum_{k=1}^K\alpha_k\big)-1}dv = \Gamma(\sum_{k=1}^K\alpha_k),$$
+and in total we have
+$$ F_{x_1,\ldots,x_{K-1}}(x_1,\ldots,x_{K-1})=\bigg(\frac{\Gamma(\sum_{k=1}^K\alpha_k)}{\prod_{k=1}^{K}\Gamma(\alpha_k)}\bigg)\bigg(\prod_{k=1}^{K-1}x_k^{\alpha_k-1}\bigg)\bigg(1-\sum_{k=1}^{K-1}x_k\bigg)^{\alpha_K-1}.$$
+We also know that $\sum_{k=1}^Kx_k=1$, $x_1,\ldots,x_{K-1}>0$ and $\sum_{k=1}^{K-1}x_k<1$, which means that $x=(x_1,\ldots,x_K)$ will be Dirichlet distributed.
+
+## 2.
+Now we want to implement a function that draws one realization from the Dirichlet distribution with parameter vector $(\alpha_1,\ldots,\alpha_K)$. We do so in the following code.
+```{r, echo = T, eval = T}
+library(MCMCpack)
+#dirichlet <- function(alpha){
+#  z<- sapply(alpha,gamma)
+#  x <- z/sum(z)
+#  return(x)
+#}
+```
+We want to test if the function draws from the correct distribution. To do so, we first check the mean and variance of a generated sample. From theory, it is known that if $(x_1,\ldots,x_K)\sim \text{Dirichlet}(\alpha_1,\ldots,\alpha_K)$, then
+$$\text{E}(X_k) = \frac{\alpha_k}{\alpha_0}, \quad \text{Var}(X_i) = \frac{\alpha_i(\alpha_0-\alpha_i)}{\alpha_0^2(\alpha_0+1)}, \quad \alpha_0 = \sum_{i=1}^K \alpha_i.$$
+To determine $(\alpha_1,\ldots,\alpha_k)$, we simulate them from an exponential distribution with $\lambda = 1$ to ensure that all $\alpha$ are positive. We then compare sample mean and variance with theoretical mean and variance for a sample with $k=5$.
+```{r, echo = T, eval = T}
+Gamma <- function(alpha){
+  return(rgamma(1,alpha))
+}
+k = 5
+n = 100000
+x <- matrix(NA, ncol = k, nrow = n)
+alpha <- exponential(1,k)
+for (i in 1:n){
+  z <- sapply(alpha, Gamma)
+  x[i,] <- z/sum(z)
+}
+cat('Theoretical mean: ', alpha/sum(alpha),'\n','Computed mean: ', apply(x,2,mean),'\n')
+cat('Theoretical variance: ', alpha*(sum(alpha)-alpha)/(sum(alpha)^2*(sum(alpha)+1)),'\n', 'Computed variance: ', apply(x,2,var))
+```
+We see that the mean and variance coincide well for all $x_k$. To further confirm that our implementation is correct, we compare a sample drawn from our function with the already implemented R function `rdirichlet` from the `MCMCpack` library. For simplicity, we let all $\alpha_k=1$, so each $x_k$ has the same marginal distribution. We then make a histogram of all $x_k$ from the two samples.
+
+```{r, echo = T, eval = T}
+n <- 50000
+alpha <- rep(1,k)
+x <- matrix(NA, ncol = k, nrow = n)
+
+for (i in 1:n){
+  z <- sapply(alpha, Gamma)
+  x[i,] <- z/sum(z)
+}
+y <- as.vector(rdirichlet(n,alpha))
+rfunc = data.frame(value = y)
+ourfunc = data.frame(value = as.vector(x))
+rfunc$type = 'R function'
+ourfunc$type = 'Our function'
+df = rbind(rfunc,ourfunc)
+ggplot(df, aes(value, fill = type)) + 
+   geom_histogram(alpha = 0.5, aes(y = ..density..), position = 'identity') + ggtitle("Our function vs. R function densities")
+```
+Also here, the histograms coincide well. As a final test, we plot a histogram of our generated sample and compare it with the theoretical density function. Because the Dirichlet distribution is a multivariate distribution, we only investigate the marginal distribution of $x_1$, and it can be shown that the marginal distribution of any $x_k$ is the Beta distribution with parameters $\alpha_k$ and $\sum_{i\neq k}\alpha_i$. This means that we can plot the density of $x_1$ from our generated sample and compare it with a Beta distribution density. Again, for simplicity we assume all $\alpha_k=1$.
+
+```{r, echo = T, eval = T}
+df2 <- data.frame(theo=seq(0,max(x[,1]),length.out=n), value=x[,1])
+ggplot(df2, aes(x = value)) + geom_histogram(aes(y = ..density..), 
+      binwidth = 0.005,fill = 'blue', color = 'blue') + stat_function(fun=dbeta,geom = "line",size=1.6,col="red",args = list(shape1=1,shape2=k-1)) + ggtitle("Our function vs. theoretical density")
+```
+
+The histogram fits the theoretical density well, and we conclude that we have implemented the function to generate Dirichlet samples correctly.
+
+# Problem D: Rejection sampling and importance sampling
