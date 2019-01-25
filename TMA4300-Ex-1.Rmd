@@ -206,17 +206,17 @@ using the distribution found in A.2 as a proposal distribution. We can do this b
 ```{r, echo = T, eval = T}
 library(pracma)
 
-x = linspace(0, 3, 100)
-alpha = 0.5
-y_gamma = dgamma(x, shape=alpha, rate=1)
-y_prop = 1/(gamma(alpha)) * (1/alpha + exp(-1))*f_A2(x, alpha)
+#x = linspace(0, 3, 100)
+#alpha = 0.5
+#y_gamma = dgamma(x, shape=alpha, rate=1)
+#y_prop = 1/(gamma(alpha)) * (1/alpha + exp(-1))*f_A2(x, alpha)
 
-df10 = data.frame(x, y_gamma, y_prop)
-h <- ggplot(data.frame(x, y_gamma, y_prop))
-h = h + geom_line(aes(x = x, y = y_gamma, colour="Gamma"), size=1.)
-h = h + geom_line(aes(x = x, y = y_prop, color="Proposal"), size=1.)
-h = h + ggtitle(paste("Gamma(",toString(alpha),", 1) vs. proposal"))
-h
+#df10 = data.frame(x, y_gamma, y_prop)
+#h <- ggplot(data.frame(x, y_gamma, y_prop))
+#h = h + geom_line(aes(x = x, y = y_gamma, colour="Gamma"), size=1.)
+#h = h + geom_line(aes(x = x, y = y_prop, color="Proposal"), size=1.)
+#h = h + ggtitle(paste("Gamma(",toString(alpha),", 1) vs. proposal"))
+#h
 
 ```
 
@@ -240,39 +240,150 @@ We compare the sample mean and variance with the theoretical mean and variance a
 
 ```{r}
 library(pracma)
-c = 1
-alpha = 0.5
-rate = 1
 
-sample_gamma = function(n=1000){
-  uniform2 = runif(n)
-  x = F_inv(n, alpha)
-  c = 1/(gamma(alpha)) * (1/alpha + exp(-1))
+small_gamma = function(alpha, n=1){
+  cat("Small gamma \n")
+  result = vector()
+  iter = 0
+  sampled = 0
+  while(sampled < n){
+
+    uniform2 = runif(n)
+    x = F_inv(n, alpha)
+    c = 1/(gamma(alpha)) * (1/alpha + exp(-1))
   
-  probs = dgamma(x, alpha, rate) / (c * f_A2(x, alpha))
-  return(x[uniform2 <= probs])
+    probs = dgamma(x, alpha, rate=1) / (c * f_A2(x, alpha))
+    
+    result = append(result, x[uniform2 <= probs])
+    
+    sampled = sampled + sum(uniform2 <= probs)
+    iter = iter + n
+  }
+  
+  iter = iter - length(result) + n
+  
+  return(list(samples = result[seq(1:n)], iter = iter))
 }
 
-g_samples <- sample_gamma(1000000)
-g_samples_filt <- g_samples[g_samples < 5]
-df12 = data.frame(x = g_samples_filt)
+large_gamma <- function(alpha, n=1){
+  cat("Large gamma \n")
+  #a = sqrt((alpha - 1)^(alpha-1)*exp(1-alpha))
+  loga = 1/2 * (alpha - 1) * (log(alpha - 1) - 1)
+  logb = 1/2 * (alpha + 1) * (log(alpha + 1) - 1)
+  #cat("Sampling for alpha = ", alpha, '\n')
+  #cat("loga = ", loga, "\n")
+  #cat("logb = ", logb, "\n")
 
-cat('Theoretical mean: ', alpha,' Computed mean: ', mean(g_samples),'\n')
-cat('Theoretical variance: ', alpha, ' Computed variance: ', var(g_samples))
+  result = vector(mode="numeric")
+  
+  i = 0
+  iter = 0
+  while (i < n){
+    iter = iter + 1 
+    log_x_1 = loga + log(runif(1))
+    log_x_2 = logb + log(runif(1))
+    #cat(log_x_1, log_x_2)
+    #y = x_2 / x_1
+    if (2*log_x_1 <= (alpha - 1)*(log_x_2 - log_x_1) - exp(log_x_2 - log_x_1)){
+      result = append(result, exp(log_x_2 - log_x_1))
+      i = i + 1
+    }
+    else{}
+  }
+  list(samples = result, iter = iter)
+}
+
+gamma2 = function(alpha, n  = 1){
+  if (alpha <= 1){
+    return(small_gamma(alpha, n))
+  }
+  else if (alpha > 1){
+    return(large_gamma(alpha, n))
+  }
+  else{
+    cat("Weird gamma \n")
+  }
+}
+
+alpha = 0.5
+G1 <- small_gamma(alpha, 10000)
+
+G1_filt = G1
+df12 = data.frame(G1_filt)
+
+cat('Theoretical mean: ', alpha,' Computed mean: ', mean(G1$samples),'\n')
+cat('Theoretical variance: ', alpha, ' Computed variance: ', var(G1$samples))
 
 c = 1/(gamma(alpha)) * (1/alpha + exp(-1))
 
 x_val = linspace(0, 5, 100)
 
-df11 <- data.frame(x = x_val, y=dgamma(x_val, alpha, rate))
+df11 <- data.frame(x = x_val, y=dgamma(x_val, alpha, 1))
 
 h <- ggplot()
+h <- h + geom_histogram(data=df12, aes(x=samples, y=..density.., color="Sampled"), binwidth=0.1)
 h <- h + geom_line(data=df11, aes(x=x, y=y, color="Theoretical"), size=1.6)
-h <- h + geom_histogram(data=df12, aes(x=x, y=..density.., color="Sampled"), binwidth=0.1, col = 'blue', fill = 'blue') 
 h <- h + ggtitle("Comparison of analytical and sampled density")
 h
 ```
 
-As we remove the limitation on $\alpha$, we no longer get a closed form expression of $c$. To sample from the Gamma with parameters $\alpha > 1$, $\beta = 1$, we can use the ratio of uniforms method
+From the moments and the figure we see that we get the correct distribution when using rejection sampling. 
+
+As we remove the limitation on $\alpha$, we no longer get a closed form expression of the optimal $c$ and this becomes an optimization problem. Instead, we may use the ratio of uniforms method to sample from the Gamma with parameters $\alpha > 1$, $\beta = 1$. We define the area
+
+$$C_f = \bigg \{(x_1, x_2): 0 \leq x_1 \leq \sqrt{f^*(\frac{x_2}{x_1})} \bigg \}, \quad f^*(x) = \begin{cases}
+x^{\alpha-1}e^{-x}, \quad 0 < x, \\
+0, \quad \text{otherwise}.
+\end{cases}$$ 
+
+And note that $y = x_2 / x_1$ will be Gamma-distributed if sampled uniformly inside $C_f$. By finding 
+
+$$ a = \sqrt{(\underset{x}{\sup} f^* (x)}, \quad b_{+} = \sqrt{ \underset{x\geq 0}{\sup} x^2 f^* (x)} , \quad b_{\_} = - \sqrt{\underset{x \leq 0}{\sup} x^2 f^* (x)}$$
+
+
+$$ (f^*(x))' = 0 \Leftrightarrow x^{\alpha-2}e^{-x}(\alpha - 1  - x) = 0 \Rightarrow x = \alpha - 1 \\
+a = \sqrt{(\alpha - 1)^{\alpha - 1}e^{1-\alpha}}$$
+
+$$(x^2 f^*(x))' = 0 \Leftrightarrow x^{\alpha}e^{-x}(\alpha + 1 - x) = 0 \\
+b_{+} = \sqrt{(\alpha + 1)^{\alpha + 1}e^{-\alpha - 1}}$$
+
+$$b_{-} = 0$$
+
+We can sample uniformly from $[0, a]\times[b_{-}, b_{+}]$ and select the subset of samples that are also in $C_f$. Then $y = \frac{x_2}{x_1}$ will be Gamma($\alpha ,1$) distributed. 
+
+```{r}
+alpha = 1.5
+
+G2 = gamma2(alpha, 10000)
+
+cat('Theoretical mean: ', alpha,' Computed mean: ', mean(G2$samples),'\n')
+cat('Theoretical variance: ', alpha, ' Computed variance: ', var(G2$samples))
+
+df16 = data.frame(data=G2)
+
+h <- ggplot(df16, aes(x=data.samples))
+h <- h + geom_histogram(data=df16, aes(x = data.samples, y=..density.., color="Sampled Function"), binwidth=0.1) 
+h <- h + stat_function(fun=dgamma,geom = "line",size=1.6,col="red",args = list(shape=alpha, rate = 1))
+h
+
+```
+
+
+
+```{r}
+iterations = c()
+
+
+for (alpha in seq(2, 2000, 10)){
+  G = gamma2(alpha, 1000)
+  iterations = append(iterations, G$iter)
+}
+
+df15 = data.frame(alpha = seq(5, 2000, 10), iterations = iterations)
+
+h <- ggplot(df15, aes(x = alpha, y= iterations, color="Iterations"))
+h <- h + geom_line()
+h
+```
 
 
