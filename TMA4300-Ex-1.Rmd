@@ -251,8 +251,11 @@ small_gamma = function(alpha, n=1){
 
     uniform2 = runif(n)
     x = F_inv(n, alpha)
+    cat(x)
+    cat(alpha)
     c = 1/(gamma(alpha)) * (1/alpha + exp(-1))
   
+    cat(c)
     probs = dgamma(x, alpha, rate=1) / (c * f_A2(x, alpha))
     
     result = append(result, x[uniform2 <= probs])
@@ -267,7 +270,7 @@ small_gamma = function(alpha, n=1){
 }
 
 large_gamma <- function(alpha, n=1){
-  cat("Large gamma \n")
+  #cat("Large gamma \n")
   #a = sqrt((alpha - 1)^(alpha-1)*exp(1-alpha))
   loga = 1/2 * (alpha - 1) * (log(alpha - 1) - 1)
   logb = 1/2 * (alpha + 1) * (log(alpha + 1) - 1)
@@ -305,7 +308,8 @@ gamma2 = function(alpha, n  = 1){
     cat("Weird gamma \n")
   }
 }
-
+```
+```{r, echo = T, eval = T}
 alpha = 0.5
 G1 <- small_gamma(alpha, 10000)
 
@@ -412,26 +416,29 @@ We also know that $\sum_{k=1}^Kx_k=1$, $x_1,\ldots,x_{K-1}>0$ and $\sum_{k=1}^{K
 Now we want to implement a function that draws one realization from the Dirichlet distribution with parameter vector $(\alpha_1,\ldots,\alpha_K)$. We do so in the following code.
 ```{r, echo = T, eval = T}
 library(MCMCpack)
-#dirichlet <- function(alpha){
-#  z<- sapply(alpha,gamma2)
-#  x <- z/sum(z)
-#  return(x)
-#}
+different_alphas <- function(alpha){
+  
+}
+dirichlet <- function(alpha){
+  z <- rep(NA, length(alpha))
+  for (i in 1:length(alpha)){
+    z[i] = gamma2(alpha[i])
+  }
+  #z<- sapply(alpha,gamma2)
+  x <- z/sum(z)
+  return(x)
+}
 ```
 We want to test if the function draws from the correct distribution. To do so, we first check the mean and variance of a generated sample. From theory, it is known that if $(x_1,\ldots,x_K)\sim \text{Dirichlet}(\alpha_1,\ldots,\alpha_K)$, then
 $$\text{E}(X_k) = \frac{\alpha_k}{\alpha_0}, \quad \text{Var}(X_i) = \frac{\alpha_i(\alpha_0-\alpha_i)}{\alpha_0^2(\alpha_0+1)}, \quad \alpha_0 = \sum_{i=1}^K \alpha_i.$$
 To determine $(\alpha_1,\ldots,\alpha_k)$, we simulate them from an exponential distribution with $\lambda = 1$ to ensure that all $\alpha$ are positive. We then compare sample mean and variance with theoretical mean and variance for a sample with $k=5$.
 ```{r, echo = T, eval = T}
-Gamma <- function(alpha){
-  return(rgamma(1,alpha))
-}
 k = 5
 n = 100000
 x <- matrix(NA, ncol = k, nrow = n)
 alpha <- exponential(1,k)
 for (i in 1:n){
-  z <- sapply(alpha, Gamma)
-  x[i,] <- z/sum(z)
+  x[i,] <- dirichlet(alpha)
 }
 cat('Theoretical mean: ', alpha/sum(alpha),'\n','Computed mean: ', apply(x,2,mean),'\n')
 cat('Theoretical variance: ', alpha*(sum(alpha)-alpha)/(sum(alpha)^2*(sum(alpha)+1)),'\n', 'Computed variance: ', apply(x,2,var))
@@ -442,10 +449,8 @@ We see that the mean and variance coincide well for all $x_k$. To further confir
 n <- 50000
 alpha <- rep(1,k)
 x <- matrix(NA, ncol = k, nrow = n)
-
 for (i in 1:n){
-  z <- sapply(alpha, Gamma)
-  x[i,] <- z/sum(z)
+  x[i,] <- dirichlet(alpha)
 }
 y <- as.vector(rdirichlet(n,alpha))
 rfunc = data.frame(value = y)
