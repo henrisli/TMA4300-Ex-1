@@ -146,10 +146,8 @@ Finally we make a histogram of our sample and compare it with the analytical den
 
 ```{r, echo = T, eval = T}
 df2 <- data.frame(theo=seq(0,max(x),length.out=n), value=x)
-h <- ggplot(df2, aes(x = value))
-h <- h + geom_histogram(aes(y = ..density..), binwidth=0.1, col = 'blue', fill = 'blue') +stat_function(fun=dnorm,geom = "line",size=1.6,col="red",args = list(mean=0, sd = 1))
-h <- h + ggtitle("Comparison of analytical and sampled density")
-h
+ggplot(df2, aes(x = value)) + geom_histogram(aes(y = ..density..), binwidth=0.1, col = 'blue', fill = 'blue') + stat_function(fun=dnorm,geom = "line",size=1.6,col="red",args = list(mean=0, sd = 1)) + ggtitle("Comparison of analytical and sampled density")
+
 x <- normal(1000)
 qqnorm(x, pch = 1, frame = FALSE)
 qqline(x, col = "steelblue", lwd = 2)
@@ -174,23 +172,26 @@ d = 2
 n = 100000
 mu = c(1,2)
 sigma = matrix(c(2.5,3,3,10),ncol=2,nrow=2)
-sample = matrix(rep(1,d*n), ncol = d, nrow = n)
+sample = matrix(NA, ncol = d, nrow = n)
 for (i in 1:n){
   sample[i,] <- normal_d(d,mu,sigma)
 }
 average = apply(sample, 2,mean)
+cat('Mean vector: \n')
 average
 covmat = cov(sample)
+cat('Covariance matrix: \n')
 covmat
 ```
 Both the mean vector and the covariance matrix coincide well with the theoretical mean and covariance.
 
-Finally we implement an Anderson-Darling normality test to check the normality of the data.
+Finally we implement an Anderson-Darling normality test to check the normality of the data. We check that each of the two elements are normal.
 ```{r, echo = T, eval = T}
 library(nortest)
-ad.test(sample)
+ad.test(sample[,1])
+ad.test(sample[,2])
 ```
-We get a p-value of $<2.2\cdot 10^{-16}$, which rejects the hypothesis that the data is not normal distributed, and we conclude that our algorithm is correct.
+Both p-values are above any reasonable significance level, which does not reject the hypothesis that the data is normal distributed, and we conclude that our algorithm is correct.
 
 # Problem B: The gamma distribution
 
