@@ -302,7 +302,7 @@ Now we want to implement a function that draws one realization from the Dirichle
 ```{r, echo = T, eval = T}
 library(MCMCpack)
 #dirichlet <- function(alpha){
-#  z<- sapply(alpha,gamma)
+#  z<- sapply(alpha,gamma2)
 #  x <- z/sum(z)
 #  return(x)
 #}
