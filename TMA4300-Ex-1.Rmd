@@ -57,6 +57,8 @@ h <- h + ggtitle("Our function vs. theoretical density")
 h
 ```
 
+KOMMENTER DISSE PLOTTENE!!!!!!!
+
 ## 2. a)
 We first note that the normalizing constant will be $c=\frac{e\alpha}{e+\alpha}$, which can be found by solving $$\int_0^{\infty} g(x)dx = 1.$$
 
@@ -431,14 +433,6 @@ dirichlet <- function(alpha){
   x <- z/sum(z)
   return(x)
 }
-
-
-
-alpha <- exponential(1,5)
-
-
-dirichlet(alpha)
-
 ```
 We want to test if the function draws from the correct distribution. To do so, we first check the mean and variance of a generated sample. From theory, it is known that if $(x_1,\ldots,x_K)\sim \text{Dirichlet}(\alpha_1,\ldots,\alpha_K)$, then
 $$\text{E}(X_k) = \frac{\alpha_k}{\alpha_0}, \quad \text{Var}(X_i) = \frac{\alpha_i(\alpha_0-\alpha_i)}{\alpha_0^2(\alpha_0+1)}, \quad \alpha_0 = \sum_{i=1}^K \alpha_i.$$
