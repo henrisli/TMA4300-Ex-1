@@ -48,11 +48,10 @@ ourfunc = data.frame(value = x)
 rfunc$type = 'R function'
 ourfunc$type = 'Our function'
 df = rbind(rfunc,ourfunc)
-ggplot(df, aes(value, fill = type)) + 
-   geom_histogram(alpha = 0.5, aes(y = ..density..), binwidth = 0.05, position = 'identity') + ggtitle("Our function vs. R function densities")
+#ggplot(df, aes(value, fill = type)) + 
+#   geom_histogram(alpha = 0.5, aes(y = ..density..), binwidth = 0.05, position = 'identity') + ggtitle("Our function vs. R function densities")
 df2 <- data.frame(theo=seq(0,max(x),length.out=n), value=x)
-ggplot(df2, aes(x = value)) + geom_histogram(aes(y = ..density..), binwidth=0.05, fill = 'blue', color = 'blue') + stat_function(fun=dexp,geom = "line",size=1.6,col="red",args = (mean=lambda)) 
-+ ggtitle("Our function vs. theoretical density")
+ggplot(df2, aes(x = value, color=type)) + geom_histogram(aes(y = ..density..), binwidth=0.05, fill = 'blue', color = 'blue') + stat_function(fun=dexp,geom = "line",size=1.6,col="red",args = (mean=lambda)) + ggtitle("Our function vs. theoretical density")
 ```
 
 KOMMENTER DISSE PLOTTENE!!!!!!!
@@ -74,7 +73,7 @@ $$\text{E}(X) = \int_0^{\infty} xg(x)dx = \frac{c}{\alpha+1} + \frac{2c}{e}.$$
 We compare results in R.
 
 ```{r, echo = T, eval = T}
-f_A2 = function(x, alpha){
+g = function(x, alpha){
   c = alpha*exp(1)/(alpha+exp(1))
   result = vector(length = length(x))
   result[x<1.] = sapply(x[x<1.], function(x) c*x^(alpha - 1))
@@ -82,7 +81,7 @@ f_A2 = function(x, alpha){
   return(as.double(result))
 }
 
-F_inv = function(n, alpha){
+G_inv = function(n, alpha){
   c = alpha*exp(1)/(alpha+exp(1))
   u = runif(n)
   result = vector(length = n)
@@ -93,7 +92,7 @@ F_inv = function(n, alpha){
 
 alpha = 2.5
 n = 10000
-xsamples = F_inv(n, alpha)
+xsamples = G_inv(n, alpha)
 c = alpha*exp(1)/(alpha+exp(1))
 mean = c/(alpha+1) + 2*c/exp(1)
 cat('Theoretical mean: ', mean, ' Sampled mean: ', mean(xsamples))
@@ -106,13 +105,13 @@ We compare results in R
 variance = c/(alpha+2)+5*c/exp(1) - mean^2
 cat('Theoretical variance: ', variance, ' Sampled variance: ', var(xsamples))
 ```
-
+We see that the sampled mean and variance coincide with the theoretical mean and variance.
 
 Finally we plot a histogram of the sample and compare it to the density function $g(x)$.
 
 ```{r, echo = T, eval = T}
 df2 <- data.frame(theo=seq(0,max(xsamples),length.out=n), value=xsamples)
-ggplot(df2, aes(x = value)) + geom_histogram(aes(y = ..density..), binwidth=0.1, col = 'blue', fill = 'blue') + stat_function(fun=f_A2,geom = "line",size=1.6,col="red",args = (mean=alpha)) + ggtitle("Comparison of analytical and sampled density")
+ggplot(df2, aes(x = value)) + geom_histogram(aes(y = ..density.., color='Sampled'), binwidth=0.1) + stat_function(fun=g,geom = "line",size=1., args = (mean=alpha), alpha=1., aes(color="Analytical")) + ggtitle("Comparison of analytical and sampled density")
 ```
 
 We see that the analytical expression overlaps perfectly with the histogram over the samples, confirming the our algorithm is correct.
@@ -201,11 +200,11 @@ $$ f(x) = \begin{cases}
 0, \quad &\text{otherwise}. \\
 \end{cases} $$
 
-using the distribution found in A.2 as a proposal distribution. We can do this because the A.2 distribution is nonzero at all points where $f(x)$ is nonzero. 
+using the distribution $g(x)$ found in A.2 as a proposal distribution. We can do this because $g(x)$ is nonzero at all points where $f(x)$ is nonzero. 
 
 We note that the acceptance probabiltiy, P_{accept}, 
 
-$$P_{accept} = \int_0^{\infty} P_{unif}(U \leq \frac{f(x)}{c g(x)} ) P_{prop}(X = x) \\
+$$P_{accept} = \int_0^{\infty} P_{uni}(U \leq \frac{f(x)}{c g(x)} ) P_{prop}(X = x) \\
  = \int_0^{\infty} \frac{f(x)}{c g(x)} g(x) = c^{-1},$$
  
 To maximize the acceptance probability, we can minimize $c$ by choosing
@@ -226,17 +225,18 @@ small_gamma = function(alpha, n=1){
   result = vector()
   iter = 0
   sampled = 0
+  c = 1/(gamma(alpha)) * (1/alpha + exp(-1))
+  
   while(sampled < n){
 
+    #sample from g(x)
     uniform2 = runif(n)
-    x = F_inv(n, alpha)
-    
-    c = 1/(gamma(alpha)) * (1/alpha + exp(-1))
-    
-    probs = dgamma(x, alpha, rate=1) / (c * as.double(f_A2(x, alpha)))
-    
+    x = G_inv(n, alpha)
+    #compute the acceptance probabilites
+    probs = dgamma(x, alpha, rate=1) / (c * as.double(g(x, alpha)))
+    #append samples where u < f(x) / c g(x)
     result = append(result, x[uniform2 <= probs])
-    
+    #increase counters
     sampled = sampled + sum(uniform2 <= probs)
     iter = iter + n
   }
@@ -245,7 +245,55 @@ small_gamma = function(alpha, n=1){
   
   return(list(samples = result[seq(1:n)], iter = iter))
 }
+```
 
+```{r, echo = T, eval = T}
+alpha = 0.95
+G1 <- small_gamma(alpha, 10000)
+df12 = data.frame(G1)
+
+cat('Theoretical mean: ', alpha,' Computed mean: ', mean(G1$samples),'\n')
+cat('Theoretical variance: ', alpha, ' Computed variance: ', var(G1$samples))
+```
+
+We see that the computed mean and variance coincide with the theoretical mean and variance.
+
+```{r}
+c = 1/(gamma(alpha)) * (1/alpha + exp(-1))
+
+ggplot(data=df12, aes(x=samples)) + geom_histogram(data=df12, aes(x=samples, y=..density.., color="Sampled"), binwidth=0.1) +  stat_function(fun=dgamma, geom = "line",size=1.6, args = list(shape=alpha, rate=1), aes(x=samples, color = "Analytical")) + ggtitle("Comparison of analytical and sampled density") + ylim(0. ,2.0)
+
+```
+
+From the figure we see that we get the correct distribution when using rejection sampling. 
+
+## 2.
+
+As we remove the limitation on $\alpha$, we no longer get a closed form expression for the $c$ giving the highest acceptance probability. Instead, we may use the ratio of uniforms method to sample from the Gamma with parameters $\alpha > 1$, $\beta = 1$. We define the area
+
+$$C_f = \bigg \{(x_1, x_2): 0 \leq x_1 \leq \sqrt{f^*(\frac{x_2}{x_1})} \bigg \}, \quad f^*(x) = \begin{cases}
+x^{\alpha-1}e^{-x}, \quad 0 < x, \\
+0, \quad \text{otherwise}.
+\end{cases}$$ 
+
+SKAL VI SI HER HVORDAN VI UTLEDER AT DEN FAKTISK ER GAMMA FORDELT?
+
+And note that $y = x_2 / x_1$ will be Gamma-distributed if sampled uniformly inside $C_f$. By finding 
+
+$$ a = \sqrt{(\underset{x}{\sup} f^* (x)}, \quad b_{+} = \sqrt{ \underset{x\geq 0}{\sup} x^2 f^* (x)} , \quad b_{\_} = - \sqrt{\underset{x \leq 0}{\sup} x^2 f^* (x)}$$
+
+
+$$ (f^*(x))' = 0 \Leftrightarrow x^{\alpha-2}e^{-x}(\alpha - 1  - x) = 0 \Rightarrow x = \alpha - 1 \\
+a = \sqrt{(\alpha - 1)^{\alpha - 1}e^{1-\alpha}}$$
+
+$$(x^2 f^*(x))' = 0 \Leftrightarrow x^{\alpha}e^{-x}(\alpha + 1 - x) = 0 \\
+b_{+} = \sqrt{(\alpha + 1)^{\alpha + 1}e^{-\alpha - 1}}$$
+
+$$b_{-} = 0$$
+
+We can sample uniformly from $[0, a]\times[b_{-}, b_{+}]$ and select the set of samples that are also in $C_f$. Then $y = \frac{x_2}{x_1}$ will be Gamma($\alpha ,1$) distributed. 
+
+```{r}
 large_gamma <- function(alpha, n=1){
   loga = 1/2 * (alpha - 1) * (log(alpha - 1) - 1)
   logb = 1/2 * (alpha + 1) * (log(alpha + 1) - 1)
@@ -266,89 +314,74 @@ large_gamma <- function(alpha, n=1){
   list(samples = result, iter = iter)
 }
 
-gamma2 = function(alpha, n  = 1){
-  if (alpha <= 1){
-    return(small_gamma(alpha, n))
-  }
-  else if (alpha > 1){
-    return(large_gamma(alpha, n))
-  }
-}
 ```
 
-```{r, echo = T, eval = T}
-alpha = 0.5
-G1 <- small_gamma(alpha, 10000)
-
-G1_filt = G1
-df12 = data.frame(G1_filt)
-
-cat('Theoretical mean: ', alpha,' Computed mean: ', mean(G1$samples),'\n')
-cat('Theoretical variance: ', alpha, ' Computed variance: ', var(G1$samples))
-
-c = 1/(gamma(alpha)) * (1/alpha + exp(-1))
-
-x_val = linspace(0, 5, 100)
-
-df11 <- data.frame(x = x_val, y=dgamma(x_val, alpha, 1))
-
-ggplot() + geom_histogram(data=df12, aes(x=samples, y=..density.., color="Sampled"), binwidth=0.1) + geom_line(data=df11, aes(x=x, y=y, color="Theoretical"), size=1.6) + ggtitle("Comparison of analytical and sampled density")
-```
-
-From the moments and the figure we see that we get the correct distribution when using rejection sampling. 
-
-## 2.
-
-As we remove the limitation on $\alpha$, we no longer get a closed form expression of the optimal $c$ and this becomes an optimization problem. Instead, we may use the ratio of uniforms method to sample from the Gamma with parameters $\alpha > 1$, $\beta = 1$. We define the area
-
-$$C_f = \bigg \{(x_1, x_2): 0 \leq x_1 \leq \sqrt{f^*(\frac{x_2}{x_1})} \bigg \}, \quad f^*(x) = \begin{cases}
-x^{\alpha-1}e^{-x}, \quad 0 < x, \\
-0, \quad \text{otherwise}.
-\end{cases}$$ 
-
-And note that $y = x_2 / x_1$ will be Gamma-distributed if sampled uniformly inside $C_f$. By finding 
-
-$$ a = \sqrt{(\underset{x}{\sup} f^* (x)}, \quad b_{+} = \sqrt{ \underset{x\geq 0}{\sup} x^2 f^* (x)} , \quad b_{\_} = - \sqrt{\underset{x \leq 0}{\sup} x^2 f^* (x)}$$
-
-
-$$ (f^*(x))' = 0 \Leftrightarrow x^{\alpha-2}e^{-x}(\alpha - 1  - x) = 0 \Rightarrow x = \alpha - 1 \\
-a = \sqrt{(\alpha - 1)^{\alpha - 1}e^{1-\alpha}}$$
-
-$$(x^2 f^*(x))' = 0 \Leftrightarrow x^{\alpha}e^{-x}(\alpha + 1 - x) = 0 \\
-b_{+} = \sqrt{(\alpha + 1)^{\alpha + 1}e^{-\alpha - 1}}$$
-
-$$b_{-} = 0$$
-
-We can sample uniformly from $[0, a]\times[b_{-}, b_{+}]$ and select the subset of samples that are also in $C_f$. Then $y = \frac{x_2}{x_1}$ will be Gamma($\alpha ,1$) distributed. 
 
 ```{r}
-alpha = 1.5
+alpha = 7.
 
-G2 = gamma2(alpha, 10000)
+G2 = large_gamma(alpha, 10000)
 
 cat('Theoretical mean: ', alpha,' Computed mean: ', mean(G2$samples),'\n')
 cat('Theoretical variance: ', alpha, ' Computed variance: ', var(G2$samples))
-
-df16 = data.frame(data=G2)
-
-ggplot(df16, aes(x=data.samples)) + geom_histogram(data=df16, aes(x = data.samples, y=..density.., color="Sampled Function"), binwidth=0.1) + stat_function(fun=dgamma,geom = "line",size=1.6,col="red",args = list(shape=alpha, rate = 1))
 ```
 
-As 
+We see that the computed mean and variance coincide with the theoretical mean and variance.
 
+```{r}
+df16 = data.frame(data=G2)
+
+ggplot(df16, aes(x=data.samples)) + geom_histogram(data=df16, aes(x = data.samples, y=..density.., color="Sampled Function"), binwidth=0.2) + stat_function(fun=dgamma,geom = "line",size=1.6,aes(color='Analytical'),args = list(shape=alpha, rate = 1))
+```
+
+From the figure we see that we get the correct distribution when sampling using the ratio of uniforms method.
+
+We wish to investigate in what manner $\alpha$ affects the acceptance probability $P$ of the ratio of uniforms method. We draw $n = 1000$ samples for $\alpha \in (1, 2000]$. 
 ```{r}
 iterations = c()
 
 for (alpha in seq(2, 2000, 10)){
-  G = gamma2(alpha, 1000)
+  G = large_gamma(alpha, 1000)
   iterations = append(iterations, G$iter)
 }
 
-df15 = data.frame(alpha = seq(5, 2000, 10), iterations = iterations)
+df15 = data.frame(alpha = seq(5, 2000, 10), P_estimate = 1000/iterations)
 
-ggplot(df15, aes(x = alpha, y= iterations, color="Iterations")) + geom_line()
+ggplot(df15, aes(x = alpha, y = P_estimate, color='Acceptance probability estimate')) + geom_line()
 ```
+COMMENT THE PLOT
 
+
+We know have reasonably efficient algorithms for sampling from the Gamma with $\alpha \in (0, 1), \beta = 1$ and $\alpha \in (1, \infty), \beta = 1$. We note that for $\alpha = 1, \beta = 1$, we observe that the pdf of the gamma coincides with the unscaled exponential distribution. We also note that $\beta$ is an inverse scale parameter, and $\frac{1}{\beta}X \sim Gamma(\alpha, \beta)$ if $X \sim (\alpha, 1)$. We use this and our two algorithms to develop a general algorithm for sampling from the gamma. 
+
+```{r}
+gamma2 = function(alpha, beta=1, n  = 1){
+  if (alpha == 1.0){
+    return(list(samples = exponential(beta, n), iter = n))
+  }
+  else if (alpha <= 1){
+    G = small_gamma(alpha, n)
+    G$samples = G$samples / beta
+    return(G)
+  }
+  else if (alpha > 1){
+    G = large_gamma(alpha, n)
+    G$samples = G$samples / beta
+    return(G)
+  }
+}
+
+alpha = 6
+beta = 6
+
+G = gamma2(alpha, beta, 10000)
+
+df17 <- data.frame(G)
+
+histo = hist(G$samples, plot=F)
+ggplot(df17, aes(x = samples)) + geom_histogram(aes(y = ..density.., color='Sampled'), bins=50) + stat_function(fun=dgamma,geom = "line",size=1.6,aes(color='Analytical'),args = list(shape=alpha, rate=beta)) + ggtitle("Comparison of analytical and sampled density") + ylim(0, 1.1*max(histo$density))
+```
+COMMENT THE PLOT
 
 
 # Problem C: The Dirichlet distribution: simulation using known relations
