@@ -51,7 +51,8 @@ df = rbind(rfunc,ourfunc)
 #ggplot(df, aes(value, fill = type)) + 
 #   geom_histogram(alpha = 0.5, aes(y = ..density..), binwidth = 0.05, position = 'identity') + ggtitle("Our function vs. R function densities")
 df2 <- data.frame(theo=seq(0,max(x),length.out=n), value=x)
-ggplot(df2, aes(x = value, color=type)) + geom_histogram(aes(y = ..density..), binwidth=0.05, fill = 'blue', color = 'blue') + stat_function(fun=dexp,geom = "line",size=1.6,col="red",args = (mean=lambda)) + ggtitle("Our function vs. theoretical density")
+
+ggplot(df2, aes(x = value)) + geom_histogram(aes(y = ..density..), binwidth=0.05, fill = 'blue', color = 'blue') + stat_function(fun=dexp,geom = "line",size=1.6,col="red",args = (mean=lambda)) + ggtitle("Our function vs. theoretical density")
 ```
 
 KOMMENTER DISSE PLOTTENE!!!!!!!
@@ -259,8 +260,6 @@ cat('Theoretical variance: ', alpha, ' Computed variance: ', var(G1$samples))
 We see that the computed mean and variance coincide with the theoretical mean and variance.
 
 ```{r}
-c = 1/(gamma(alpha)) * (1/alpha + exp(-1))
-
 ggplot(data=df12, aes(x=samples)) + geom_histogram(data=df12, aes(x=samples, y=..density.., color="Sampled"), binwidth=0.1) +  stat_function(fun=dgamma, geom = "line",size=1.6, args = list(shape=alpha, rate=1), aes(x=samples, color = "Analytical")) + ggtitle("Comparison of analytical and sampled density") + ylim(0. ,2.0)
 
 ```
