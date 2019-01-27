@@ -471,6 +471,7 @@ The histogram fits the theoretical density well, and we conclude that we have im
 # Problem D: Rejection sampling and importance sampling
 
 ## 1.
+We construct a rejection sampling algorithm to sample from $f(\theta|y)$ using $U(0,1)$ as the proposal density. We get the following algorithm.
 ```{r, echo = T, eval = T}
 f <- function(x){
   return((2+x)^125*(1-x)^38*x^34)
@@ -500,6 +501,10 @@ draw_samples <- function(n){
 
 ```
 
+## 2.
+
+Now we want to estiamte the posterior mean $\theta$ by Monte-Carlo integration using $M = 10000$ samples from $f(\theta|y)$. We also draw a histogram of the samples and compare it with the theoretical density, in addition to marking the estimated posterior mean.
+
 ```{r, echo 0 T, eval = T}
 n = 10000
 g <- function(x){
@@ -513,7 +518,29 @@ df <- data.frame(theo=seq(0,1,length.out=n), value=y$samples)
 ggplot(df, aes(x = value)) + geom_histogram(aes(y = ..density..), binwidth=0.001, col = 'blue', fill = 'blue') + stat_function(fun=f_density,geom = "line",size=1.6,col="red") + ggtitle("Comparison of analytical and sampled density") + xlim(0,1) + geom_segment(x = sum(y$samples)/n, xend = sum(y$samples)/n, y = 0, yend = 100, col = "green", size = 1.2, linetype = "longdash")
 ```
 
+The theoretical mean is found by numerically integrating $\text{E}(X) = \int_0^1 x f(x)dx$, and we see that it coincides well with the estimated posterior mean. The density of the sample in the histogram also coincides well with the theoretical density distribution, so we conclude that the sampling algorithm is correct. Also, the indicated estimated posterior mean looks reasonable, considering the density distribution.
+
+## 3.
+In theory, we would expect the rejection sampling algorithm to generate $c \geq f(x)/g(x)$ random numbers on average to obtain one sample of $f(\theta|y)$, where $g(x)$ is the proposal density. Because we want our algorithm to be as efficient as possible, we want $c$ as small as possible. The proposal density $g(x)$ is $U(0,1)$, so $g(x) = 1$. Then, we can set $c = \max{f(x)/g(x)} = \max{f(x)}$. We now compare the theoretical expected number of generated numbers with the sample average.
+
 ```{r, echo = T, eval = T}
 cat("Average random numbers generated: ", y$iterations/n, '\n')
 cat("Theoretical expected number: ", optimum$objective/integrate(f,0,1)$value)
+```
+Again, we see that the average number from the sample coincide well with the theoretical expected number.
+
+
+```{r, echo = T, eval = T}
+k = 6
+n = 10000
+x <- matrix(NA, ncol = k, nrow = n)
+alpha <- rep(1,k)
+for (i in 1:n){
+  x[i,] <- dirichlet(alpha)
+}
+
+w = f(y$samples)/dbeta(y$samples,1,5)
+w = f(x[,1])/dbeta(x[,1],1,5)
+mu_hat <- sum(x[,1]*w)/sum(w)
+mu_hat2 <- sum(x[,1]*w)/(n*integrate(f,0,1)$value)
 ```
