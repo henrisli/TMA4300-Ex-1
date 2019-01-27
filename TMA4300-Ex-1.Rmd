@@ -79,8 +79,9 @@ f_A2 = function(x, alpha){
   result = vector(length = length(x))
   result[x<1.] = sapply(x[x<1.], function(x) c*x^(alpha - 1))
   result[x>=1.] = sapply(x[x>=1.], function(x) c*exp(-x))
-  return(result)
+  return(as.double(result))
 }
+
 
 F_inv = function(n, alpha){
   c = alpha*exp(1)/(alpha+exp(1))
@@ -245,7 +246,7 @@ We compare the sample mean and variance with the theoretical mean and variance a
 library(pracma)
 
 small_gamma = function(alpha, n=1){
-  cat("Small gamma \n")
+  #cat("Small gamma \n")
   result = vector()
   iter = 0
   sampled = 0
@@ -253,11 +254,11 @@ small_gamma = function(alpha, n=1){
 
     uniform2 = runif(n)
     x = F_inv(n, alpha)
-    cat(x)
-    cat(alpha)
+    #cat(x)
+    #cat(alpha)
     c = 1/(gamma(alpha)) * (1/alpha + exp(-1))
   
-    cat(c)
+    #cat(c)
     probs = dgamma(x, alpha, rate=1) / (c * f_A2(x, alpha))
     
     result = append(result, x[uniform2 <= probs])
@@ -425,12 +426,22 @@ different_alphas <- function(alpha){
 dirichlet <- function(alpha){
   z <- rep(NA, length(alpha))
   for (i in 1:length(alpha)){
-    z[i] = gamma2(alpha[i])
+    #print(alpha[i])
+    z[i] = gamma2(alpha[i])$samples
   }
   #z<- sapply(alpha,gamma2)
+  #print(z)
   x <- z/sum(z)
   return(x)
 }
+
+
+
+alpha <- exponential(1,5)
+
+
+dirichlet(alpha)
+
 ```
 We want to test if the function draws from the correct distribution. To do so, we first check the mean and variance of a generated sample. From theory, it is known that if $(x_1,\ldots,x_K)\sim \text{Dirichlet}(\alpha_1,\ldots,\alpha_K)$, then
 $$\text{E}(X_k) = \frac{\alpha_k}{\alpha_0}, \quad \text{Var}(X_i) = \frac{\alpha_i(\alpha_0-\alpha_i)}{\alpha_0^2(\alpha_0+1)}, \quad \alpha_0 = \sum_{i=1}^K \alpha_i.$$
