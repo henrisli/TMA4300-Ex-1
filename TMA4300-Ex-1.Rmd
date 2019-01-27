@@ -544,6 +544,7 @@ cat("Theoretical expected number: ", optimum$objective/integrate(f,0,1)$value)
 
 Again, we see that the average number from the sample coincide well with the theoretical expected number.
 
+## 4.
 
 ```{r, echo = T, eval = T}
 k = 6
