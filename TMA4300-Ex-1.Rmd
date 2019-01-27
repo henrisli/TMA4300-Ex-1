@@ -254,12 +254,14 @@ small_gamma = function(alpha, n=1){
 
     uniform2 = runif(n)
     x = F_inv(n, alpha)
-    #cat(x)
-    #cat(alpha)
+    
+    #cat(typeof(x), ' x ')
+    #cat(typeof(alpha), ' alpha ')
     c = 1/(gamma(alpha)) * (1/alpha + exp(-1))
   
-    #cat(c)
-    probs = dgamma(x, alpha, rate=1) / (c * f_A2(x, alpha))
+    #cat(typeof(c), ' c ')
+    #cat(typeof(f_A2(x,alpha)))
+    probs = dgamma(x, alpha, rate=1) / (c * as.double(f_A2(x, alpha)))
     
     result = append(result, x[uniform2 <= probs])
     
@@ -420,17 +422,12 @@ We also know that $\sum_{k=1}^Kx_k=1$, $x_1,\ldots,x_{K-1}>0$ and $\sum_{k=1}^{K
 Now we want to implement a function that draws one realization from the Dirichlet distribution with parameter vector $(\alpha_1,\ldots,\alpha_K)$. We do so in the following code.
 ```{r, echo = T, eval = T}
 library(MCMCpack)
-different_alphas <- function(alpha){
-  
+get_gamma_samples <- function(alpha){
+  return(gamma2(alpha)$samples)
 }
+
 dirichlet <- function(alpha){
-  z <- rep(NA, length(alpha))
-  for (i in 1:length(alpha)){
-    #print(alpha[i])
-    z[i] = gamma2(alpha[i])$samples
-  }
-  #z<- sapply(alpha,gamma2)
-  #print(z)
+  z<- sapply(alpha,get_gamma_samples)
   x <- z/sum(z)
   return(x)
 }
@@ -448,7 +445,7 @@ $$\text{E}(X_k) = \frac{\alpha_k}{\alpha_0}, \quad \text{Var}(X_i) = \frac{\alph
 To determine $(\alpha_1,\ldots,\alpha_k)$, we simulate them from an exponential distribution with $\lambda = 1$ to ensure that all $\alpha$ are positive. We then compare sample mean and variance with theoretical mean and variance for a sample with $k=5$.
 ```{r, echo = T, eval = T}
 k = 5
-n = 100000
+n = 20000
 x <- matrix(NA, ncol = k, nrow = n)
 alpha <- exponential(1,k)
 for (i in 1:n){
@@ -460,7 +457,7 @@ cat('Theoretical variance: ', alpha*(sum(alpha)-alpha)/(sum(alpha)^2*(sum(alpha)
 We see that the mean and variance coincide well for all $x_k$. To further confirm that our implementation is correct, we compare a sample drawn from our function with the already implemented R function `rdirichlet` from the `MCMCpack` library. For simplicity, we let all $\alpha_k=1$, so each $x_k$ has the same marginal distribution. We then make a histogram of all $x_k$ from the two samples.
 
 ```{r, echo = T, eval = T}
-n <- 50000
+n <- 10000
 alpha <- rep(1,k)
 x <- matrix(NA, ncol = k, nrow = n)
 for (i in 1:n){
@@ -486,3 +483,52 @@ ggplot(df2, aes(x = value)) + geom_histogram(aes(y = ..density..),
 The histogram fits the theoretical density well, and we conclude that we have implemented the function to generate Dirichlet samples correctly.
 
 # Problem D: Rejection sampling and importance sampling
+
+## 1.
+```{r, echo = T, eval = T}
+f <- function(x){
+  return((2+x)^125*(1-x)^38*x^34)
+}
+
+optimum = optimize(f,c(0,1),maximum = TRUE)
+
+draw_samples <- function(n){
+  samples <- rep(NA,n)
+  iter = 0
+  for (i in 1:n){
+    finish = 0
+    while(finish ==0){
+      iter = iter + 1
+      x_sample <- runif(1)
+      alpha <- f(x_sample)/optimum$objective
+      u = runif(1)
+      if (u <=alpha){
+        samples[i] <- x_sample
+        finish <- 1
+      }
+    }
+  }
+  return(list(samples = samples, iterations = iter))
+}
+
+
+```
+
+```{r, echo 0 T, eval = T}
+n = 10000
+g <- function(x){
+  return(f(x)*x)
+}
+f_density <- function(x){return(f(x)/integrate(f,0,1)$value)}
+y <- draw_samples(n)
+cat("Computed mean: ", sum(y$samples)/n, '\n')
+cat("Theoretical mean: ", integrate(g,0,1)$value/integrate(f,0,1)$value, '\n')
+df <- data.frame(theo=seq(0,1,length.out=n), value=y$samples)
+ggplot(df, aes(x = value)) + geom_histogram(aes(y = ..density..), binwidth=0.001, col = 'blue', fill = 'blue') + stat_function(fun=f_density,geom = "line",size=1.6,col="red") + ggtitle("Comparison of analytical and sampled density") + xlim(0,1) + geom_segment(x = sum(y$samples)/n, xend = sum(y$samples)/n, y = 0, yend = 100, col = "green", size = 1.2, linetype = "longdash")
+```
+
+```{r, echo = T, eval = T}
+cat("Average random numbers generated: ", y$iterations/n, '\n')
+cat("Theoretical expected number: ", optimum$objective/integrate(f,0,1)$value)
+```
+
