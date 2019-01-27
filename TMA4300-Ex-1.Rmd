@@ -51,10 +51,8 @@ df = rbind(rfunc,ourfunc)
 ggplot(df, aes(value, fill = type)) + 
    geom_histogram(alpha = 0.5, aes(y = ..density..), binwidth = 0.05, position = 'identity') + ggtitle("Our function vs. R function densities")
 df2 <- data.frame(theo=seq(0,max(x),length.out=n), value=x)
-h <- ggplot(df2, aes(x = value))
-h <- h + geom_histogram(aes(y = ..density..), binwidth=0.05, fill = 'blue', color = 'blue') +stat_function(fun=dexp,geom = "line",size=1.6,col="red",args = (mean=lambda))
-h <- h + ggtitle("Our function vs. theoretical density")
-h
+ggplot(df2, aes(x = value)) + geom_histogram(aes(y = ..density..), binwidth=0.05, fill = 'blue', color = 'blue') + stat_function(fun=dexp,geom = "line",size=1.6,col="red",args = (mean=lambda)) 
++ ggtitle("Our function vs. theoretical density")
 ```
 
 KOMMENTER DISSE PLOTTENE!!!!!!!
@@ -83,7 +81,6 @@ f_A2 = function(x, alpha){
   result[x>=1.] = sapply(x[x>=1.], function(x) c*exp(-x))
   return(as.double(result))
 }
-
 
 F_inv = function(n, alpha){
   c = alpha*exp(1)/(alpha+exp(1))
@@ -115,10 +112,7 @@ Finally we plot a histogram of the sample and compare it to the density function
 
 ```{r, echo = T, eval = T}
 df2 <- data.frame(theo=seq(0,max(xsamples),length.out=n), value=xsamples)
-h <- ggplot(df2, aes(x = value))
-h <- h + geom_histogram(aes(y = ..density..), binwidth=0.1, col = 'blue', fill = 'blue') +stat_function(fun=f_A2,geom = "line",size=1.6,col="red",args = (mean=alpha))
-h <- h + ggtitle("Comparison of analytical and sampled density")
-h
+ggplot(df2, aes(x = value)) + geom_histogram(aes(y = ..density..), binwidth=0.1, col = 'blue', fill = 'blue') + stat_function(fun=f_A2,geom = "line",size=1.6,col="red",args = (mean=alpha)) + ggtitle("Comparison of analytical and sampled density")
 ```
 
 We see that the analytical expression overlaps perfectly with the histogram over the samples, confirming the our algorithm is correct.
@@ -209,23 +203,6 @@ $$ f(x) = \begin{cases}
 
 using the distribution found in A.2 as a proposal distribution. We can do this because the A.2 distribution is nonzero at all points where $f(x)$ is nonzero. 
 
-```{r, echo = T, eval = T}
-library(pracma)
-
-#x = linspace(0, 3, 100)
-#alpha = 0.5
-#y_gamma = dgamma(x, shape=alpha, rate=1)
-#y_prop = 1/(gamma(alpha)) * (1/alpha + exp(-1))*f_A2(x, alpha)
-
-#df10 = data.frame(x, y_gamma, y_prop)
-#h <- ggplot(data.frame(x, y_gamma, y_prop))
-#h = h + geom_line(aes(x = x, y = y_gamma, colour="Gamma"), size=1.)
-#h = h + geom_line(aes(x = x, y = y_prop, color="Proposal"), size=1.)
-#h = h + ggtitle(paste("Gamma(",toString(alpha),", 1) vs. proposal"))
-#h
-
-```
-
 We note that the acceptance probabiltiy, P_{accept}, 
 
 $$P_{accept} = \int_0^{\infty} P_{unif}(U \leq \frac{f(x)}{c g(x)} ) P_{prop}(X = x) \\
@@ -245,10 +222,7 @@ To generate $n$ samples from $f(x)$ we sample from $X \sim g(x)$ and $U \sim u[0
 We compare the sample mean and variance with the theoretical mean and variance and compare the sampled density with the theoretical density. 
 
 ```{r}
-library(pracma)
-
 small_gamma = function(alpha, n=1){
-  #cat("Small gamma \n")
   result = vector()
   iter = 0
   sampled = 0
@@ -257,12 +231,8 @@ small_gamma = function(alpha, n=1){
     uniform2 = runif(n)
     x = F_inv(n, alpha)
     
-    #cat(typeof(x), ' x ')
-    #cat(typeof(alpha), ' alpha ')
     c = 1/(gamma(alpha)) * (1/alpha + exp(-1))
-  
-    #cat(typeof(c), ' c ')
-    #cat(typeof(f_A2(x,alpha)))
+    
     probs = dgamma(x, alpha, rate=1) / (c * as.double(f_A2(x, alpha)))
     
     result = append(result, x[uniform2 <= probs])
@@ -277,14 +247,8 @@ small_gamma = function(alpha, n=1){
 }
 
 large_gamma <- function(alpha, n=1){
-  #cat("Large gamma \n")
-  #a = sqrt((alpha - 1)^(alpha-1)*exp(1-alpha))
   loga = 1/2 * (alpha - 1) * (log(alpha - 1) - 1)
   logb = 1/2 * (alpha + 1) * (log(alpha + 1) - 1)
-  #cat("Sampling for alpha = ", alpha, '\n')
-  #cat("loga = ", loga, "\n")
-  #cat("logb = ", logb, "\n")
-
   result = vector(mode="numeric")
   
   i = 0
@@ -293,8 +257,6 @@ large_gamma <- function(alpha, n=1){
     iter = iter + 1 
     log_x_1 = loga + log(runif(1))
     log_x_2 = logb + log(runif(1))
-    #cat(log_x_1, log_x_2)
-    #y = x_2 / x_1
     if (2*log_x_1 <= (alpha - 1)*(log_x_2 - log_x_1) - exp(log_x_2 - log_x_1)){
       result = append(result, exp(log_x_2 - log_x_1))
       i = i + 1
@@ -311,11 +273,9 @@ gamma2 = function(alpha, n  = 1){
   else if (alpha > 1){
     return(large_gamma(alpha, n))
   }
-  else{
-    cat("Weird gamma \n")
-  }
 }
 ```
+
 ```{r, echo = T, eval = T}
 alpha = 0.5
 G1 <- small_gamma(alpha, 10000)
@@ -332,11 +292,7 @@ x_val = linspace(0, 5, 100)
 
 df11 <- data.frame(x = x_val, y=dgamma(x_val, alpha, 1))
 
-h <- ggplot()
-h <- h + geom_histogram(data=df12, aes(x=samples, y=..density.., color="Sampled"), binwidth=0.1)
-h <- h + geom_line(data=df11, aes(x=x, y=y, color="Theoretical"), size=1.6)
-h <- h + ggtitle("Comparison of analytical and sampled density")
-h
+ggplot() + geom_histogram(data=df12, aes(x=samples, y=..density.., color="Sampled"), binwidth=0.1) + geom_line(data=df11, aes(x=x, y=y, color="Theoretical"), size=1.6) + ggtitle("Comparison of analytical and sampled density")
 ```
 
 From the moments and the figure we see that we get the correct distribution when using rejection sampling. 
@@ -375,11 +331,7 @@ cat('Theoretical variance: ', alpha, ' Computed variance: ', var(G2$samples))
 
 df16 = data.frame(data=G2)
 
-h <- ggplot(df16, aes(x=data.samples))
-h <- h + geom_histogram(data=df16, aes(x = data.samples, y=..density.., color="Sampled Function"), binwidth=0.1) 
-h <- h + stat_function(fun=dgamma,geom = "line",size=1.6,col="red",args = list(shape=alpha, rate = 1))
-h
-
+ggplot(df16, aes(x=data.samples)) + geom_histogram(data=df16, aes(x = data.samples, y=..density.., color="Sampled Function"), binwidth=0.1) + stat_function(fun=dgamma,geom = "line",size=1.6,col="red",args = list(shape=alpha, rate = 1))
 ```
 
 As 
@@ -394,9 +346,7 @@ for (alpha in seq(2, 2000, 10)){
 
 df15 = data.frame(alpha = seq(5, 2000, 10), iterations = iterations)
 
-h <- ggplot(df15, aes(x = alpha, y= iterations, color="Iterations"))
-h <- h + geom_line()
-h
+ggplot(df15, aes(x = alpha, y= iterations, color="Iterations")) + geom_line()
 ```
 
 
@@ -505,8 +455,6 @@ draw_samples <- function(n){
   }
   return(list(samples = samples, iterations = iter))
 }
-
-
 ```
 
 ## 2.
