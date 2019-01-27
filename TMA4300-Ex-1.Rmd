@@ -51,8 +51,7 @@ df = rbind(rfunc,ourfunc)
 ggplot(df, aes(value, fill = type)) + 
    geom_histogram(alpha = 0.5, aes(y = ..density..), binwidth = 0.05, position = 'identity') + ggtitle("Our function vs. R function densities")
 df2 <- data.frame(theo=seq(0,max(x),length.out=n), value=x)
-ggplot(df2, aes(x = value)) + geom_histogram(aes(y = ..density..), binwidth=0.05, fill = 'blue', color = 'blue') + stat_function(fun=dexp,geom = "line",size=1.6,col="red",args = (mean=lambda)) 
-+ ggtitle("Our function vs. theoretical density")
+ggplot(df2, aes(x = value)) + geom_histogram(aes(y = ..density..), binwidth=0.05, fill = 'blue', color = 'blue') + stat_function(fun=dexp,geom = "line",size=1.6,col="red",args = (mean=lambda)) + ggtitle("Our function vs. theoretical density")
 ```
 
 KOMMENTER DISSE PLOTTENE!!!!!!!
@@ -288,7 +287,7 @@ cat('Theoretical variance: ', alpha, ' Computed variance: ', var(G1$samples))
 
 c = 1/(gamma(alpha)) * (1/alpha + exp(-1))
 
-x_val = linspace(0, 5, 100)
+x_val = seq(0, 5, lenght.out = 100)
 
 df11 <- data.frame(x = x_val, y=dgamma(x_val, alpha, 1))
 
