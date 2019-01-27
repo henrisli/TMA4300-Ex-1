@@ -79,8 +79,9 @@ f_A2 = function(x, alpha){
   result = vector(length = length(x))
   result[x<1.] = sapply(x[x<1.], function(x) c*x^(alpha - 1))
   result[x>=1.] = sapply(x[x>=1.], function(x) c*exp(-x))
-  return(result)
+  return(as.double(result))
 }
+
 
 F_inv = function(n, alpha){
   c = alpha*exp(1)/(alpha+exp(1))
@@ -195,6 +196,8 @@ Both p-values are above any reasonable significance level, which does not reject
 
 # Problem B: The gamma distribution
 
+## 1.
+
 We can sample from the gamma distribution with $\alpha \in (0, 1)$ and $\beta = 1$,
 
 $$ f(x) = \begin{cases}
@@ -251,6 +254,7 @@ small_gamma = function(alpha, n=1){
 
     uniform2 = runif(n)
     x = F_inv(n, alpha)
+    
     #cat(typeof(x), ' x ')
     #cat(typeof(alpha), ' alpha ')
     c = 1/(gamma(alpha)) * (1/alpha + exp(-1))
@@ -335,6 +339,8 @@ h
 
 From the moments and the figure we see that we get the correct distribution when using rejection sampling. 
 
+## 2.
+
 As we remove the limitation on $\alpha$, we no longer get a closed form expression of the optimal $c$ and this becomes an optimization problem. Instead, we may use the ratio of uniforms method to sample from the Gamma with parameters $\alpha > 1$, $\beta = 1$. We define the area
 
 $$C_f = \bigg \{(x_1, x_2): 0 \leq x_1 \leq \sqrt{f^*(\frac{x_2}{x_1})} \bigg \}, \quad f^*(x) = \begin{cases}
@@ -374,11 +380,10 @@ h
 
 ```
 
-
+As 
 
 ```{r}
 iterations = c()
-
 
 for (alpha in seq(2, 2000, 10)){
   G = gamma2(alpha, 1000)
@@ -420,11 +425,20 @@ library(MCMCpack)
 get_gamma_samples <- function(alpha){
   return(gamma2(alpha)$samples)
 }
+
 dirichlet <- function(alpha){
   z<- sapply(alpha,get_gamma_samples)
   x <- z/sum(z)
   return(x)
 }
+
+
+
+alpha <- exponential(1,5)
+
+
+dirichlet(alpha)
+
 ```
 We want to test if the function draws from the correct distribution. To do so, we first check the mean and variance of a generated sample. From theory, it is known that if $(x_1,\ldots,x_K)\sim \text{Dirichlet}(\alpha_1,\ldots,\alpha_K)$, then
 $$\text{E}(X_k) = \frac{\alpha_k}{\alpha_0}, \quad \text{Var}(X_i) = \frac{\alpha_i(\alpha_0-\alpha_i)}{\alpha_0^2(\alpha_0+1)}, \quad \alpha_0 = \sum_{i=1}^K \alpha_i.$$
@@ -527,6 +541,7 @@ In theory, we would expect the rejection sampling algorithm to generate $c \geq 
 cat("Average random numbers generated: ", y$iterations/n, '\n')
 cat("Theoretical expected number: ", optimum$objective/integrate(f,0,1)$value)
 ```
+
 Again, we see that the average number from the sample coincide well with the theoretical expected number.
 
 
@@ -544,3 +559,4 @@ w = f(x[,1])/dbeta(x[,1],1,5)
 mu_hat <- sum(x[,1]*w)/sum(w)
 mu_hat2 <- sum(x[,1]*w)/(n*integrate(f,0,1)$value)
 ```
+
