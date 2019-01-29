@@ -531,18 +531,48 @@ Again, we see that the average number from the sample coincide well with the the
 
 ## 4.
 
+Based on the samples $\{\theta_i\}$ we already have, we wish to investigate what effect a different prior will have on estimated posterior mean of $\theta$. We consider the prior $\theta \sim Beta(1, 5)$, $\Pi_N(\theta) = \frac{\Gamma(1+5)}{\Gamma(1) \Gamma(5)} \theta^{0} (1-\theta)^{4}, \quad 0 \leq \theta \leq 1$. As our samples $\{\theta_i\}$ were generated from the posterior
+
+$$ f_{o}(\theta_i \lvert y) = (2 + \theta_i)^{y_1} ( 1 - \theta_i)^{y_2 + y_3}\theta_i^{y_4}$$
+We compute the weights by 
+
+$$w_i = f_n(\theta_i \lvert y) / f_o(\theta_i \lvert y) = \pi_n(\theta_i) / \pi_o(\theta_i) =  \frac{\Gamma(1+5)}{\Gamma(1) \Gamma(5)} (1-\theta_i)^{4}$$
+
+and the importance sampling posterior mean becomes 
+$$ \hat{\mu}_{IS} = \frac{1}{n} \sum \theta_i w_i$$
+
 ```{r, echo = T, eval = T}
-k = 6
-n = 10000
-x <- matrix(NA, ncol = k, nrow = n)
-alpha <- rep(1,k)
-for (i in 1:n){
-  x[i,] <- dirichlet(alpha)
+unscaled_posterior_target = function(x){
+  return(f_density(x)*dbeta(x, 1, 5))
 }
 
-w = f(y$samples)/dbeta(y$samples,1,5)
-w = f(x[,1])/dbeta(x[,1],1,5)
-mu_hat <- sum(x[,1]*w)/sum(w)
-mu_hat2 <- sum(x[,1]*w)/(n*integrate(f,0,1)$value)
+NC_posterior = integrate(unscaled_posterior_target, 0, 1)$value
+
+posterior_target = function(x){
+  return(unscaled_posterior_target(x) / NC_posterior) 
+}
+
+posterior_target_mean_density = function(x){
+  return(x * posterior_target(x))
+}
+
+theoretical_mean = integrate(posterior_target_mean_density, 0, 1)$value
+
+weights = posterior_target(y$samples) / f_density(y$samples)
+posterior_mean = sum(y$samples*weights) / (n)
+cat("IS posterior mean estimate:", posterior_mean, "\n")
+cat("Analytical posterior mean:", theoretical_mean)
 ```
 
+We have here computed the normalizing constant of the posterior. If this were not numerically feasible, we could use the self-normalizing importance sampling estimate of the posterior mean
+
+$$ \tilde{\mu}_{IS} = \frac{\sum \theta_i w_i }{\sum w_i} $$
+
+```{r}
+unscaled_weights = unscaled_posterior_target(y$samples) / f(y$samples)
+posterior_mean_SN = sum(y$samples*unscaled_weights) / (sum(unscaled_weights))
+
+cat("self-normalizing IS posterior mean estimate:", posterior_mean_SN, "\n")
+cat("Analytical posterior mean:", theoretical_mean)
+```
+We see that the SKRIV NOE HER SOM KOMMENTERER RESULTATENE. KANSKE SKAL VI OGSÅ HA NOE PLOT HER? GJENSTÅR FORTSATT Å LEGGE INN CAPTIONS I NOEN PLOT OG KOMMENTERE DEM
