@@ -271,12 +271,9 @@ cat('Theoretical variance: ', alpha, ' Computed variance: ', var(G1$samples))
 We see that the computed mean and variance coincide with the theoretical mean and variance.
 
 ```{r, echo = T, eval = T}
-<<<<<<< HEAD
 ggplot(data=df12, aes(x=samples)) + geom_histogram(data=df12, aes(x=samples, y=..density.., color="Sampled"), binwidth=0.1) +  stat_function(fun=dgamma, geom = "line",size=1.6, args = list(shape=alpha, rate=1), aes(x=samples, color = "Analytical")) + ggtitle("Comparison of analytical and sampled density") + ylim(0. ,2.0) + labs(x='x', y='density', caption=paste('Comparison of the analytical density of the Gamma(', alpha, ',1) distribution (red line) \n and the sampled density (blue bars).'))
-=======
 ggplot(data=df12, aes(x=samples)) + geom_histogram(data=df12, aes(x=samples, y=..density.., color="Sampled"), binwidth=0.1) +  stat_function(fun=dgamma, geom = "line",size=1.6, args = list(shape=alpha, rate=1), aes(x=samples, color = "Analytical")) + ggtitle("The Gamma pdf - comparison of analytical and sampled density for small alpha") + ylim(0. ,2.0) + labs(x='x', y='density', caption=paste('Comparison of the analytical density of the Gamma(', alpha, ',1) distribution (red line) \n and the sampled density (blue bars).'))
 
->>>>>>> ae078efa054a422476a0f961f181d72d29319180
 ```
 
 From the figure we see that we get the correct distribution when using rejection sampling. 
