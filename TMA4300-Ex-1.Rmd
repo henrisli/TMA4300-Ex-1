@@ -64,8 +64,7 @@ We wish to sample from the pdf
 $$g(x) = \begin{cases} c x^{\alpha - 1}, \quad 0 < x < 1, \\
 c e^{-x}, \quad 1 \leq x, \\
 0, \quad otherwise.
-\end{cases}
-$$
+\end{cases}$$
 
 We first note that the normalizing constant will be $c=\frac{e\alpha}{e+\alpha}$, which can be found by solving $$\int_0^{\infty} g(x)dx = 1.$$
 
@@ -274,7 +273,6 @@ We see that the computed mean and variance coincide with the theoretical mean an
 
 ```{r, echo = T, eval = T}
 ggplot(data=df12, aes(x=samples)) + geom_histogram(data=df12, aes(x=samples, y=..density.., color="Sampled"), binwidth=0.1) +  stat_function(fun=dgamma, geom = "line",size=1.6, args = list(shape=alpha, rate=1), aes(x=samples, color = "Analytical")) + ggtitle("Comparison of analytical and sampled density") + ylim(0. ,2.0) + labs(x='x', y='density', caption=paste('Comparison of the analytical density of the Gamma(', alpha, ',1) distribution (red line) \n and the sampled density (blue bars).'))
-
 ```
 
 From the figure we see that we get the correct distribution when using rejection sampling. 
