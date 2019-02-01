@@ -595,6 +595,3 @@ cat(paste('Mass left of x =',est,':', integrate(dbeta2, 0, est)$value))
 We observe that $Beta(1,5)$ has the majority of its mass to the left of our Monte Carlo posterior mean estimate. Assuming the $Beta(1,5)$ prior is reasonable if we have a priori knowledge that $\theta$ might be much smaller than $0.62$. Here, however, this does not seem reasonable to assume. 
 
 Simply by assuming a new prior, we have induced a non-negligible change in the estimate of the posterior mean. In this case, it is probable that the $Beta(1,5)$ prior brings us away from the true distribution of $\theta$. This is an example of the dangers associated with the Bayesian approach; while assuming a reasonable prior may give increased accuracy in the results, wrong assumptions may induce a bias. Some might call this another facet of the bias-variance trade-off. 
-
-
-
