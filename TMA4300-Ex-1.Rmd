@@ -2,7 +2,7 @@
 title: 'TMA4300 Computer Intensive Statistical Methods Exercise 1, Spring 2019'
 output:
   pdf_document:
-    toc: yes
+    toc: no
     toc_depth: '2'
   html_document:
     toc: yes
@@ -25,10 +25,10 @@ opts_chunk$set(tidy.opts = list(width.cutoff = 68), tidy = TRUE, warning = FALSE
 ## 1.
 We make a function that draws $n$ random numbers from an exponential distribution with parameter $\lambda$. If $u$ is uniformly distributed between 0 and 1, $u\sim U(0,1)$, then $x=-\log(u)/\lambda$ will be exponentially distributed with parameter $\lambda$, or $x\sim \text{Exp}(\lambda)$.
 ```{r, echo = T, eval = T}
-library(ggplot2)
+library(ggplot2) # Load library for plotting
 exponential<- function(lambda, n=1){
-  u = runif(n)
-  x = -1/lambda*log(u)
+  u = runif(n) # Draw uniformly distributed variables
+  x = -1/lambda*log(u) # Do transformation to get exp. distr. variables 
   return(x)
 }
 ```
@@ -36,23 +36,16 @@ Then we want to check if this function is correct. To do this, we check a few th
 ```{r, echo = T, eval = T}
 n = 10000
 lambda = 4.300
-x = exponential(lambda,n)
+x = exponential(lambda,n) # Draw samples from created function
 cat('Theoretical mean: ', 1/lambda,' Computed mean: ', mean(x),'\n')
 cat('Theoretical variance: ', 1/lambda^2, ' Computed variance: ', var(x))
 ```
 We see that they are almost the same. Finally we make two plots. The first is a histogram comparison of our function and the R function `rexp()`, which draws random samples from an exponential distribution. The second plot is a histogram of our random sample compared with the analytical exponential distribution.
 ```{r, echo = T, eval = T, out.width = "50%", fig.align = "center"}
-y = rexp(n, lambda)
-rfunc = data.frame(value = y)
-ourfunc = data.frame(value = x)
-rfunc$type = 'R function'
-ourfunc$type = 'Our function'
-df = rbind(rfunc,ourfunc)
-#ggplot(df, aes(value, fill = type)) + 
-#   geom_histogram(alpha = 0.5, aes(y = ..density..), binwidth = 0.05, position = 'identity') + ggtitle("Our function vs. R function densities")
-df2 <- data.frame(theo=seq(0,max(x),length.out=n), value=x)
-
-ggplot(df2, aes(x = value)) + geom_histogram(aes(y = ..density..), binwidth=0.05, fill = 'blue', color = 'blue') + stat_function(fun=dexp,geom = "line",size=1.6,col="red",args = (mean=lambda)) + ggtitle("The exponential pdf - comparison of analytical and sampled density") + labs(x='x', y='density', caption='Comparison of the analytical density of the exponential distribution (red line) and the sampled density (blue bars).')
+# Prepare generated samples for plotting by putting them in a dataframe 
+df2 <- data.frame(theo=seq(0,max(x),length.out=n), x=x)
+# Plot the data
+ggplot(df2, aes(x = x)) + geom_histogram(aes(y = ..density.., color = "Sampled"), binwidth=0.05) + stat_function(fun=dexp,geom = "line",size=1.6,args = (mean=lambda),aes(color="Analytical")) + ggtitle("The exponential pdf - comparison of analytical and sampled density") + labs(x='x', y='density', caption='Comparison of the analytical density of the exponential distribution (red line) and the sampled density (blue bars).')
 ```
 
 From the figure we see that the density of our samples overlaps with the analytical density and can thus conclude that our algorithm is correct. 
@@ -83,26 +76,26 @@ $$\text{E}(X) = \int_0^{\infty} xg(x)dx = \frac{c}{\alpha+1} + \frac{2c}{e}.$$
 We compare results in R.
 
 ```{r, echo = T, eval = T}
+# The function g(x) from problem A.2
 g = function(x, alpha){
   c = alpha*exp(1)/(alpha+exp(1))
   result = vector(length = length(x))
   result[x<1.] = sapply(x[x<1.], function(x) c*x^(alpha - 1))
   result[x>=1.] = sapply(x[x>=1.], function(x) c*exp(-x))
-  return(as.double(result))
-}
-
+  return(as.double(result))}
+# The following function returns n from the density function g(x)
+# by doing inversion sampling
 G_inv = function(n, alpha){
   c = alpha*exp(1)/(alpha+exp(1))
   u = runif(n)
   result = vector(length = n)
   result[u < c/alpha] = (alpha/c * u[u < c/alpha])^(1/alpha)
   result[u >= c/alpha] = -log(1/alpha + exp(-1) - u[u >= c/alpha]/c)
-  return(result)
-}
+  return(result)}
 
 alpha = 2.5
 n = 10000
-xsamples = G_inv(n, alpha)
+xsamples = G_inv(n, alpha) # Sample from the density function g(x) by inversion sampling
 c = alpha*exp(1)/(alpha+exp(1))
 mean = c/(alpha+1) + 2*c/exp(1)
 cat('Theoretical mean: ', mean, ' Sampled mean: ', mean(xsamples))
@@ -122,7 +115,9 @@ We see that the sampled mean and variance coincide with the theoretical mean and
 Finally we plot a histogram of the sample and compare it to the density function $g(x)$.
 
 ```{r, echo = T, eval = T, out.width = "50%", fig.align = "center"}
+# Prepare generated samples for plotting by putting them in a dataframe 
 df2 <- data.frame(theo=seq(0,max(xsamples),length.out=n), value=xsamples)
+# Plot the data
 ggplot(df2, aes(x = value)) + geom_histogram(aes(y = ..density.., color='Sampled'), binwidth=0.1) + stat_function(fun=g,geom = "line",size=1., args = (mean=alpha), alpha=1., aes(color="Analytical")) + ggtitle("g(x), Comparison of analytical and sampled density") + labs(x='x', y='density', caption=paste('Comparison of the analytical density of g(x) (red line) \n and the sampled density (blue bars).'))
 ```
 
@@ -132,20 +127,21 @@ From the figure we see that the analytical density overlaps with the sampled den
 
 To simulate from the standard normal distribution, we implement a function that performs the Box-Müller transformation. Given $x_1 \sim U(0,1)$ and $x_2 \sim \text{Exp}(1/2)$, we have that $y_1 = \sqrt{x_2}\cos{(2\pi x_1)}$ and $y_2 = \sqrt{x_2}\sin{(2\pi x_1)}$ will be i.i.d. standard normal. To sample from the exponential distribution, we use the `exponential` function implemented earlier. The following function implements the Box-Müller transformation to generate $n$ independent samples from the standard normal distribution. To reduce runtime of the algorithm, we assume $n$ to be an even number, so that we can generate only $n/2$ samples from the uniform and exponential distributions and use both $y_1$ and $y_2$.
 ```{r, echo = T, eval = T}
+# Function to draw n i.i.d. Normal(0,1) variables
+# based on Box-Muller transform
 normal <- function(n){
   x_1 <- runif(n/2)
   x_2 <- exponential(1/2, n/2)
   y_1 <- sqrt(x_2)*cos(2*pi*x_1)
   y_2 <- sqrt(x_2)*sin(2*pi*x_1)
   y <- c(y_1,y_2)
-  return(y)
-}
+  return(y)}
 ```
 
 Then we want to verify the algorithm, so we compute the mean and variance of the sample.
 ```{r, echo = T, eval = T}
 n = 100000
-x <- normal(n)
+x <- normal(n) # Draw n i.i.d. Normal(0,1) variables
 cat('Theoretical mean: ', 0,' Computed mean: ', mean(x),'\n')
 cat('Theoretical variance: ', 1, ' Computed variance: ', var(x))
 ```
@@ -154,9 +150,11 @@ We see that the computed mean and variance coincide with the theoretical mean an
 Finally we make a histogram of our sample and compare it with the analytical density of the standard normal distribution. In addition, we provide a Q-Q plot to check normality of the data.
 
 ```{r, echo = T, eval = T, out.width = "50%", fig.align = "center"}
+# Prepare generated samples for plotting by putting them in a dataframe 
 df2 <- data.frame(theo=seq(0,max(x),length.out=n), value=x)
+# Plot the data
 ggplot(df2, aes(x = value)) + geom_histogram(aes(y = ..density..), binwidth=0.1, col = 'blue', fill = 'blue') + stat_function(fun=dnorm,geom = "line",size=1.6,col="red",args = list(mean=0, sd = 1)) + ggtitle("The normal pdf - comparison of analytical and sampled density") + labs(x='x', y='density', caption=paste('Comparison of the analytical density of the Normal(0, 1) distribution (red line) \n and the sampled density (blue bars).'))
-
+# Make a qq-plot of the generated samples
 qqnorm(x, pch = 1, frame = FALSE)
 qqline(x, col = "steelblue", lwd = 2)
 ```
@@ -166,11 +164,12 @@ Also here, the histogram coincides well with the standard normal density functio
 ## 4.
 We now implement a function that generates samples from a $d$-variate normal distribution with mean vector $\mu$ and covariance matrix $\Sigma$. We use the function `normal`, which we created in task A.3. to generate $d$ i.i.d. standard normal samples. Then we use the transformation $y = \mu + Ax \sim N(\mu, A A^T)$, with $AA^T=\Sigma$ and $x$ being a vector with the independent standard normal samples. We use the Cholesky decomposition for A.
 ```{r, echo = T, eval = T}
+# Function to draw one sample of a d-variate Normal(mu, sigma) variable
+# The function uses a transformation of d i.i.d. Normal(0,1) variables
 normal_d <- function(d, mu, sigma){
   x <- normal(d)
   y <- mu + t(chol(sigma))%*%x
-  return(y)
-}
+  return(y)}
 ```
 
 Then, we draw samples from a $d$-variate distribution to check our results. We use
@@ -179,11 +178,11 @@ We check if the generated sample has the correct mean vector and covariance matr
 ```{r, echo = T, eval = T}
 d = 2
 n = 100000
-mu = c(1,2)
-sigma = matrix(c(2.5,3,3,10),ncol=2,nrow=2)
-sample = matrix(NA, ncol = d, nrow = n)
+mu = c(1,2) # Mean vector
+sigma = matrix(c(2.5,3,3,10),ncol=2,nrow=2) # Covariance matrix
+sample = matrix(NA, ncol = d, nrow = n) # Prepare to draw samples
 for (i in 1:n){
-  sample[i,] <- normal_d(d,mu,sigma)
+  sample[i,] <- normal_d(d,mu,sigma) # Draw n samples
 }
 average = apply(sample, 2,mean)
 cat('Mean vector: \n')
@@ -197,6 +196,7 @@ Both the mean vector and the covariance matrix coincide well with the theoretica
 Finally we implement an Anderson-Darling normality test to check the normality of the data. We check that each of the two elements are normal.
 ```{r, echo = T, eval = T}
 library(nortest)
+# Conduct Anderson-Daling test to check normality of the data
 ad.test(sample[,1])
 ad.test(sample[,2])
 ```
@@ -239,14 +239,14 @@ small_gamma = function(alpha, n=1){
   
   while(sampled < n){
 
-    #sample from g(x)
+    # Sample from g(x)
     uniform2 = runif(n)
     x = G_inv(n, alpha)
-    #compute the acceptance probabilites
+    # Compute the acceptance probabilites
     probs = dgamma(x, alpha, rate=1) / (c * as.double(g(x, alpha)))
-    #append samples where u < f(x) / c g(x)
+    # Append samples where u < f(x) / c g(x)
     result = append(result, x[uniform2 <= probs])
-    #increase counters
+    # Increase counters
     sampled = sampled + sum(uniform2 <= probs)
     iter = iter + n
   }
@@ -273,7 +273,6 @@ We see that the computed mean and variance coincide with the theoretical mean an
 ```{r, echo = T, eval = T, out.width = "50%", fig.align = "center"}
 ggplot(data=df12, aes(x=samples)) + geom_histogram(data=df12, aes(x=samples, y=..density.., color="Sampled"), binwidth=0.1) +  stat_function(fun=dgamma, geom = "line",size=1.6, args = list(shape=alpha, rate=1), aes(x=samples, color = "Analytical")) + ggtitle("Comparison of analytical and sampled density") + ylim(0. ,2.0) + labs(x='x', y='density', caption=paste('Comparison of the analytical density of the Gamma(', alpha, ',1) distribution (red line) \n and the sampled density (blue bars).'))
 ggplot(data=df12, aes(x=samples)) + geom_histogram(data=df12, aes(x=samples, y=..density.., color="Sampled"), binwidth=0.1) +  stat_function(fun=dgamma, geom = "line",size=1.6, args = list(shape=alpha, rate=1), aes(x=samples, color = "Analytical")) + ggtitle("The Gamma pdf - comparison of analytical and sampled density for small alpha") + ylim(0. ,2.0) + labs(x='x', y='density', caption=paste('Comparison of the analytical density of the Gamma(', alpha, ',1) distribution (red line) \n and the sampled density (blue bars).'))
-
 ```
 
 From the figure we see that we get the correct distribution when using rejection sampling. 
