@@ -41,7 +41,7 @@ cat('Theoretical mean: ', 1/lambda,' Computed mean: ', mean(x),'\n')
 cat('Theoretical variance: ', 1/lambda^2, ' Computed variance: ', var(x))
 ```
 We see that they are almost the same. Finally we make two plots. The first is a histogram comparison of our function and the R function `rexp()`, which draws random samples from an exponential distribution. The second plot is a histogram of our random sample compared with the analytical exponential distribution.
-```{r, echo = T, eval = T}
+```{r, echo = T, eval = T, out.width = "50%", fig.align = "center"}
 y = rexp(n, lambda)
 rfunc = data.frame(value = y)
 ourfunc = data.frame(value = x)
@@ -64,8 +64,7 @@ We wish to sample from the pdf
 $$g(x) = \begin{cases} c x^{\alpha - 1}, \quad 0 < x < 1, \\
 c e^{-x}, \quad 1 \leq x, \\
 0, \quad otherwise.
-\end{cases}
-$$
+\end{cases}$$
 
 We first note that the normalizing constant will be $c=\frac{e\alpha}{e+\alpha}$, which can be found by solving $$\int_0^{\infty} g(x)dx = 1.$$
 
@@ -122,7 +121,7 @@ We see that the sampled mean and variance coincide with the theoretical mean and
 
 Finally we plot a histogram of the sample and compare it to the density function $g(x)$.
 
-```{r, echo = T, eval = T}
+```{r, echo = T, eval = T, out.width = "50%", fig.align = "center"}
 df2 <- data.frame(theo=seq(0,max(xsamples),length.out=n), value=xsamples)
 ggplot(df2, aes(x = value)) + geom_histogram(aes(y = ..density.., color='Sampled'), binwidth=0.1) + stat_function(fun=g,geom = "line",size=1., args = (mean=alpha), alpha=1., aes(color="Analytical")) + ggtitle("g(x), Comparison of analytical and sampled density") + labs(x='x', y='density', caption=paste('Comparison of the analytical density of g(x) (red line) \n and the sampled density (blue bars).'))
 ```
@@ -154,7 +153,7 @@ We see that the computed mean and variance coincide with the theoretical mean an
 
 Finally we make a histogram of our sample and compare it with the analytical density of the standard normal distribution. In addition, we provide a Q-Q plot to check normality of the data.
 
-```{r, echo = T, eval = T}
+```{r, echo = T, eval = T, out.width = "50%", fig.align = "center"}
 df2 <- data.frame(theo=seq(0,max(x),length.out=n), value=x)
 ggplot(df2, aes(x = value)) + geom_histogram(aes(y = ..density..), binwidth=0.1, col = 'blue', fill = 'blue') + stat_function(fun=dnorm,geom = "line",size=1.6,col="red",args = list(mean=0, sd = 1)) + ggtitle("The normal pdf - comparison of analytical and sampled density") + labs(x='x', y='density', caption=paste('Comparison of the analytical density of the Normal(0, 1) distribution (red line) \n and the sampled density (blue bars).'))
 
@@ -271,7 +270,8 @@ cat('Theoretical variance: ', alpha, ' Computed variance: ', var(G1$samples))
 
 We see that the computed mean and variance coincide with the theoretical mean and variance.
 
-```{r, echo = T, eval = T}
+```{r, echo = T, eval = T, out.width = "50%", fig.align = "center"}
+ggplot(data=df12, aes(x=samples)) + geom_histogram(data=df12, aes(x=samples, y=..density.., color="Sampled"), binwidth=0.1) +  stat_function(fun=dgamma, geom = "line",size=1.6, args = list(shape=alpha, rate=1), aes(x=samples, color = "Analytical")) + ggtitle("Comparison of analytical and sampled density") + ylim(0. ,2.0) + labs(x='x', y='density', caption=paste('Comparison of the analytical density of the Gamma(', alpha, ',1) distribution (red line) \n and the sampled density (blue bars).'))
 ggplot(data=df12, aes(x=samples)) + geom_histogram(data=df12, aes(x=samples, y=..density.., color="Sampled"), binwidth=0.1) +  stat_function(fun=dgamma, geom = "line",size=1.6, args = list(shape=alpha, rate=1), aes(x=samples, color = "Analytical")) + ggtitle("The Gamma pdf - comparison of analytical and sampled density for small alpha") + ylim(0. ,2.0) + labs(x='x', y='density', caption=paste('Comparison of the analytical density of the Gamma(', alpha, ',1) distribution (red line) \n and the sampled density (blue bars).'))
 
 ```
@@ -338,7 +338,7 @@ cat('Theoretical variance: ', alpha, ' Computed variance: ', var(G2$samples))
 
 We see that the computed mean and variance coincide with the theoretical mean and variance.
 
-```{r, echo = T, eval = T}
+```{r, echo = T, eval = T, out.width = "50%", fig.align = "center"}
 df16 = data.frame(data=G2)
 
 ggplot(df16, aes(x=data.samples)) + geom_histogram(data=df16, aes(x = data.samples, y=..density.., color="Sampled Function"), binwidth=0.2) + stat_function(fun=dgamma,geom = "line",size=1.6,aes(color='Analytical'),args = list(shape=alpha, rate = 1)) + ggtitle("The Gamma pdf - comparison of analytical and sampled density for large alpha") + labs(x='x', y='density', caption=paste('Comparison of the analytical density of the Gamma(', alpha, ',1) distribution (red line) \n and the sampled density (blue bars).'))
@@ -347,7 +347,7 @@ ggplot(df16, aes(x=data.samples)) + geom_histogram(data=df16, aes(x = data.sampl
 From the figure we see that we get the correct distribution when sampling using the ratio of uniforms method.
 
 We wish to investigate in what manner $\alpha$ affects the acceptance probability $P$ of the ratio of uniforms method. We draw $n = 1000$ samples for $\alpha \in (1, 2000]$ and count, for each $\alpha$, the average number of iterations of the rejection sampling algorithm required to sample 1 gamma-distributed variable. The inverse of this will then be an estimate of the acceptance probability. 
-```{r, echo = T, eval = T}
+```{r, echo = T, eval = T, out.width = "50%", fig.align = "center"}
 iterations = c()
 
 for (alpha in seq(2, 2000, 10)){
@@ -365,7 +365,7 @@ From the plot we see that $P_accept$ decreases with larger $\alpha$ but seems to
 
 We know have reasonably efficient algorithms for sampling from the Gamma with $\alpha \in (0, 1), \beta = 1$ and $\alpha \in (1, \infty), \beta = 1$. We note that for $\alpha = 1, \beta = 1$, we observe that the pdf of the gamma coincides with the unscaled exponential distribution. We also note that $\beta$ is an inverse scale parameter, and $\frac{1}{\beta}X \sim Gamma(\alpha, \beta)$ if $X \sim (\alpha, 1)$. We use this and our two algorithms to develop a general algorithm for sampling from the gamma. 
 
-```{r, echo = T, eval = T}
+```{r, echo = T, eval = T, out.width = "50%", fig.align = "center"}
 gamma2 = function(alpha, beta=1, n  = 1){
   if (alpha == 1.0){
     return(list(samples = exponential(beta, n), iter = n))
@@ -444,7 +444,7 @@ cat('Theoretical variance: ', alpha*(sum(alpha)-alpha)/(sum(alpha)^2*(sum(alpha)
 ```
 We see that the mean and variance coincide well for all $x_k$. To further confirm that our implementation is correct, we compare a sample drawn from our function with the already implemented R function `rdirichlet` from the `MCMCpack` library. For simplicity, we let all $\alpha_k=1$, so each $x_k$ has the same marginal distribution. We then make a histogram of all $x_k$ from the two samples.
 
-```{r, echo = T, eval = T}
+```{r, echo = T, eval = T, out.width = "50%", fig.align = "center"}
 n <- 10000
 alpha <- rep(1,k)
 x <- matrix(NA, ncol = k, nrow = n)
@@ -462,7 +462,7 @@ ggplot(df, aes(value, fill = type)) +
 ```
 Also here, the histograms coincide well. As a final test, we plot a histogram of our generated sample and compare it with the analytical density function. Because the Dirichlet distribution is a multivariate distribution, we only investigate the marginal distribution of $x_1$, and it can be shown that the marginal distribution of any $x_k$ is the Beta distribution with parameters $\alpha_k$ and $\sum_{i\neq k}\alpha_i$. This means that we can plot the density of $x_1$ from our generated sample and compare it with a Beta distribution density. Again, for simplicity we assume all $\alpha_k=1$.
 
-```{r, echo = T, eval = T}
+```{r, echo = T, eval = T, out.width = "50%", fig.align = "center"}
 df2 <- data.frame(theo=seq(0,max(x[,1]),length.out=n), value=x[,1])
 ggplot(df2, aes(x = value)) + geom_histogram(aes(y = ..density..), 
       binwidth = 0.005,fill = 'blue', color = 'blue') + stat_function(fun=dbeta,geom = "line",size=1.6,col="red",args = list(shape1=1,shape2=k-1)) + ggtitle("Our function vs. analytical density") + labs(x='x', y='density', caption=paste('Comparison of the sampled density of x_1 sampled from our dirichlet sampler (blue bars) and the Beta distribution (red line)'))
@@ -510,7 +510,7 @@ draw_samples <- function(n){
 
 Now we want to estimate the posterior mean $\theta$ by Monte-Carlo integration using $M = 10000$ samples from $f(\theta|y)$. We also draw a histogram of the samples and compare it with the analytical density, in addition to marking the estimated posterior mean.
 
-```{r, echo 0 T, eval = T}
+```{r, echo 0 T, eval = T, out.width = "50%", fig.align = "center"}
 n = 10000
 g <- function(x){
   return(f(x)*x)
