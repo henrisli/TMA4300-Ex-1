@@ -461,8 +461,8 @@ Also here, the histograms coincide well. As a final test, we plot a histogram of
 
 ```{r, echo = T, eval = T, out.width = "50%", fig.align = "center"}
 df2 <- data.frame(theo=seq(0,max(x[,1]),length.out=n), value=x[,1])
-ggplot(df2, aes(x = value)) + geom_histogram(aes(y = ..density..), 
-      binwidth = 0.005,fill = 'blue', color = 'blue') + stat_function(fun=dbeta,geom = "line",size=1.6,col="red",args = list(shape1=1,shape2=k-1)) + ggtitle("Our function vs. analytical density") + labs(x='x', y='density', caption=paste('Comparison of the sampled density of x_1 sampled from our dirichlet sampler (blue bars) and the Beta distribution (red line)'))
+ggplot(df2, aes(x = value)) + geom_histogram(aes(y = ..density.., colour = "Sampled"), 
+      binwidth = 0.005) + stat_function(fun=dbeta,geom = "line",size=1.6,aes(col="Analytical"),args = list(shape1=1,shape2=k-1)) + ggtitle("Our function vs. analytical density") + labs(x='x', y='density', caption=paste('Comparison of the sampled density of x_1 sampled from our dirichlet sampler (blue bars) and the Beta distribution (red line)'))
 ```
 
 The histogram fits the analytical density well, and we conclude that we have implemented the function to generate Dirichlet samples correctly.
@@ -517,7 +517,7 @@ y <- draw_samples(n)
 cat("Computed mean: ", sum(y$samples)/n, '\n')
 cat("Theoretical mean: ", integrate(g,0,1)$value/integrate(f,0,1)$value, '\n')
 df <- data.frame(theo=seq(0,1,length.out=n), value=y$samples)
-ggplot(df, aes(x = value)) + geom_histogram(aes(y = ..density..), binwidth=0.001, col = 'blue', fill = 'blue') + stat_function(fun=f_density,geom = "line",size=1.6,col="red") + ggtitle("Comparison of analytical and sampled density") + xlim(0,1) + geom_segment(x = sum(y$samples)/n, xend = sum(y$samples)/n, y = 0, yend = 100, col = "green", size = 1.2, linetype = "longdash") + labs(x='x', y='density', caption=paste('Comparison of the sampled density of x_k sampled from our dirichlet sampler (red bars) and the sampler from MCMpack (blue bars)'))
+ggplot(df, aes(x = value)) + geom_histogram(aes(y = ..density.., colour = "Sampled"), binwidth=0.001) + stat_function(fun=f_density,geom = "line",size=1.6,aes(colour="Analytical")) + ggtitle("Comparison of analytical and sampled density") + xlim(0,1) + geom_segment(x = sum(y$samples)/n, xend = sum(y$samples)/n, y = 0, yend = 100, aes(colour = "Mean"), size = 1.2, linetype = "longdash") + labs(x='x', y='density', caption=paste('Comparison of the sampled density of x_k sampled from our dirichlet sampler (red bars) and the sampler from MCMpack (blue bars)'))
 ```
 
 The theoretical mean is found by numerically integrating $\text{E}(X) = \int_0^1 x f(x)dx$, and we see that it coincides well with the estimated posterior mean. From the figure we see that the density of the sample in the histogram also coincides well with the analytical density distribution, so we conclude that the sampling algorithm is correct. Also, the indicated estimated posterior mean looks reasonable, considering the density distribution.
@@ -534,16 +534,16 @@ Again, we see that the average number from the sample coincide well with the the
 
 ## 4.
 
-Based on the samples $\{\theta_i\}$ we already have, we wish to estimate the IS posterior mean when assuming a different prior. We consider the prior $\theta \sim Beta(1, 5)$, $\Pi_N(\theta) = \frac{\Gamma(1+5)}{\Gamma(1) \Gamma(5)} \theta^{0} (1-\theta)^{4}, \quad 0 \leq \theta \leq 1$. As our samples $\{\theta_i\}$ were generated from the old posterior, denoted $f_{o}$,
+Based on the samples $\{\theta_i\}$ we already have, we wish to estimate the IS posterior mean when assuming a different prior. We consider the prior $\theta \sim Beta(1, 5)$, $\pi_{\text{new}}(\theta) = \frac{\Gamma(1+5)}{\Gamma(1) \Gamma(5)} \theta^{0} (1-\theta)^{4}$, $0 \leq \theta \leq 1$. As our samples $\{\theta_i\}$ were generated from the old posterior, denoted $f_{o}$,
 
 $$ f_{o}(\theta_i \lvert y) = (2 + \theta_i)^{y_1} ( 1 - \theta_i)^{y_2 + y_3}\theta_i^{y_4}$$
 
-Only the prior will differ between the target distribution $f_n$ and the proposal distribution $f_o$ we can compute the weights by
+Only the prior will differ between the target distribution $f_n$ and the proposal distribution $f_o$. We can compute the weights by
 
-$$w_i = f_n(\theta_i \lvert y) / f_o(\theta_i \lvert y) = \pi_n(\theta_i) / \pi_o(\theta_i) =  \frac{\Gamma(1+5)}{\Gamma(1) \Gamma(5)} (1-\theta_i)^{4},$$
+$$w_i = f_n(\theta_i \lvert y) / f_o(\theta_i \lvert y) = \pi_n(\theta_i) / \pi_o(\theta_i) =  \frac{\Gamma(1+5)}{\Gamma(1) \Gamma(5)} (1-\theta_i)^{4}.$$
 
 The importance sampling posterior mean becomes 
-$$ \hat{\mu}_{IS} = \frac{1}{n} \sum \theta_i w_i$$
+$$ \hat{\mu}_{IS} = \frac{1}{n} \sum \theta_i w_i.$$
 
 ```{r, echo = T, eval = T}
 unscaled_posterior_target = function(x){
@@ -570,7 +570,7 @@ cat("Analytical posterior mean:", theoretical_mean)
 
 We have here computed the normalizing constant of the posterior. If this were not numerically feasible, we could use the self-normalizing importance sampling estimate of the posterior mean
 
-$$ \tilde{\mu}_{IS} = \frac{\sum \theta_i w_i }{\sum w_i} $$
+$$ \tilde{\mu}_{IS} = \frac{\sum \theta_i w_i }{\sum w_i}.$$
 
 ```{r}
 unscaled_weights = unscaled_posterior_target(y$samples) / f(y$samples)
