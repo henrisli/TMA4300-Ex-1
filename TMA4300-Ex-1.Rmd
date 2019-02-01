@@ -535,28 +535,39 @@ Again, we see that the average number from the sample coincide well with the the
 
 ## 4.
 
-Based on the samples $\{\theta_i\}$ we already have, we wish to estimate the IS posterior mean when assuming a different prior. We consider the prior $\theta \sim Beta(1, 5)$, $\Pi_N(\theta) = \frac{\Gamma(1+5)}{\Gamma(1) \Gamma(5)} \theta^{0} (1-\theta)^{4}, \quad 0 \leq \theta \leq 1$. As our samples $\{\theta_i\}$ were generated from the old posterior, denoted $f_{o}$,
+We now wish to estimate the posterior mean of $\theta$ when we assume the new prior
+$$\pi_{new} = Beta(1,5)$$
 
-$$ f_{o}(\theta_i \lvert y) = (2 + \theta_i)^{y_1} ( 1 - \theta_i)^{y_2 + y_3}\theta_i^{y_4}$$
+We get the new posterior pdf
 
-Only the prior will differ between the target distribution $f_n$ and the proposal distribution $f_o$ we can compute the weights by
+$$ f_{new}(\theta \lvert \bf{y}) \propto (2 + \theta)^{y_1} ( 1 - \theta)^{y_2 + y_3}\theta^{y_4} \frac{\Gamma(1+5)}{\Gamma(1) \Gamma(5)} \theta^{0} (1-\theta)^{4}  $$
 
-$$w_i = f_n(\theta_i \lvert y) / f_o(\theta_i \lvert y) = \pi_n(\theta_i) / \pi_o(\theta_i) =  \frac{\Gamma(1+5)}{\Gamma(1) \Gamma(5)} (1-\theta_i)^{4},$$
+To be computationally efficient, we may wish to use importance sampling on the batch of samples already generated under the uniform prior. Using $f_{new}$ as the target density and $f_{old},$
+
+$$ f_{old}(\theta \lvert y) \propto (2 + \theta)^{y_1} ( 1 - \theta)^{y_2 + y_3}\theta^{y_4}$$
+
+as the proposal density we get the weights. 
+
+$$w_i = f_{new}(\theta_i \lvert y) / f_{old}(\theta_i \lvert y) \propto  \pi_n(\theta_i) / \pi_o(\theta_i) =  \frac{\Gamma(1+5)}{\Gamma(1) \Gamma(5)} (1-\theta_i)^{4},$$
 
 The importance sampling posterior mean becomes 
 $$ \hat{\mu}_{IS} = \frac{1}{n} \sum \theta_i w_i$$
 
 ```{r, echo = T, eval = T}
+#The new unscaled posterior target pdf, NC * f_new
 unscaled_posterior_target = function(x){
   return(f_density(x)*dbeta(x, 1, 5))
 }
 
+#Compute the normalizing constant of f_new
 NC_posterior = integrate(unscaled_posterior_target, 0, 1)$value
 
+#Normalized new posterior target pdf, f_new
 posterior_target = function(x){
   return(unscaled_posterior_target(x) / NC_posterior) 
 }
 
+#The density of x, f_new(x) * x
 posterior_target_mean_density = function(x){
   return(x * posterior_target(x))
 }
@@ -568,6 +579,8 @@ posterior_mean = sum(y$samples*weights) / (n)
 cat("IS posterior mean estimate:", posterior_mean, "\n")
 cat("Analytical posterior mean:", theoretical_mean)
 ```
+
+We see that the IS posterior mean estimate is close to the analytical mean. We suspect that the target and proposal densities are sufficiently close such that the bias introduced by estimating the new mean based on the already generated samples is sufficiently small. 
 
 We have here computed the normalizing constant of the posterior. If this were not numerically feasible, we could use the self-normalizing importance sampling estimate of the posterior mean
 
@@ -581,7 +594,7 @@ cat("self-normalizing IS posterior mean estimate:", posterior_mean_SN, "\n")
 cat("Analytical posterior mean:", theoretical_mean)
 ```
 
-We observe a slight shift in the IS estimate of the posterior mean when assuming a different prior. This is as expected, as such an estimate will fall between the Monte Carlo estimate under a uniform prior (`r sum(y$samples)/n`) and the expectation of the prior $B \sim Beta(1, 5) \Leftarrow E(B) = 1 / (1+5) = 0.167$. 
+Under a new prior, we observe a slight shift in the estimate of the posterior mean. This is as expected, as such an estimate will fall between the Monte Carlo estimate under a uniform prior (`r sum(y$samples)/n`) and the expectation of the new prior $B \sim Beta(1, 5) \Rightarrow E(B) = 1 / (1+5) = 0.167$.
 
 We investigate what proportion of its mass the $Beta(1, 5)$ prior has on the left side of `r sum(y$samples)/n`.
 
@@ -593,9 +606,9 @@ est = sum(y$samples)/n
 cat(paste('Mass left of x =',est,':', integrate(dbeta2, 0, est)$value))
 ```
 
-We observe that $Beta(1,5)$ has the majority of its mass to the left of our Monte Carlo posterior mean estimate. Assuming the $Beta(1,5)$ prior is reasonable if we have a priori knowledge that $\theta$ might be much smaller than $0.62$. Here, however, this does not seem reasonable to assume. 
+We observe that $Beta(1,5)$ has the majority of its mass for small $\theta$. Assuming the $Beta(1,5)$ prior is reasonable if we have a priori knowledge that $\theta$ will be very small. Here, however, this does not seem reasonable to assume. 
 
-Simply by assuming a new prior, we have induced a non-negligible change in the estimate of the posterior mean. In this case, it is probable that the $Beta(1,5)$ prior brings us away from the true distribution of $\theta$. This is an example of the dangers associated with the Bayesian approach; while assuming a reasonable prior may give increased accuracy in the results, wrong assumptions may induce a bias. Some might call this another facet of the bias-variance trade-off. 
+Simply by assuming a prior, we have induced a non-negligible change in the estimate of the posterior mean. In this case, it is possible that the $Beta(1,5)$ prior brings us away from the true distribution of $\theta$. This is an example of the power and dangers of the Bayesian approach; while assuming a reasonable prior may give increased accuracy in the results, wrong assumptions may induce a bias. Some might call this another facet of the bias-variance trade-off. 
 
 
 
