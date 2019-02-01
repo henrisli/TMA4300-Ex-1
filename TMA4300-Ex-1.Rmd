@@ -271,8 +271,13 @@ cat('Theoretical variance: ', alpha, ' Computed variance: ', var(G1$samples))
 We see that the computed mean and variance coincide with the theoretical mean and variance.
 
 ```{r, echo = T, eval = T, out.width = "50%", fig.align = "center"}
+<<<<<<< HEAD
 ggplot(data=df12, aes(x=samples)) + geom_histogram(data=df12, aes(x=samples, y=..density.., color="Sampled"), binwidth=0.1) +  stat_function(fun=dgamma, geom = "line",size=1.6, args = list(shape=alpha, rate=1), aes(x=samples, color = "Analytical")) + ggtitle("Comparison of analytical and sampled density") + ylim(0. ,2.0) + labs(x='x', y='density', caption=paste('Comparison of the analytical density of the Gamma(', alpha, ',1) distribution (red line) \n and the sampled density (blue bars).'))
 ggplot(data=df12, aes(x=samples)) + geom_histogram(data=df12, aes(x=samples, y=..density.., color="Sampled"), binwidth=0.1) +  stat_function(fun=dgamma, geom = "line",size=1.6, args = list(shape=alpha, rate=1), aes(x=samples, color = "Analytical")) + ggtitle("The Gamma pdf - comparison of analytical and sampled density for small alpha") + ylim(0. ,2.0) + labs(x='x', y='density', caption=paste('Comparison of the analytical density of the Gamma(', alpha, ',1) distribution (red line) \n and the sampled density (blue bars).'))
+=======
+ggplot(data=df12, aes(x=samples)) + geom_histogram(data=df12, aes(x=samples, y=..density.., color="Sampled"), binwidth=0.1) +  stat_function(fun=dgamma, geom = "line",size=1.6, args = list(shape=alpha, rate=1), aes(x=samples, color = "Analytical")) + ggtitle("Gamma pdf - comparison of analytical and sampled density") + ylim(0. ,2.0) + labs(x='x', y='density', caption=paste('Comparison of the analytical density of the Gamma(', alpha, ',1) distribution (red line) \n and the sampled density (blue bars).'))
+
+>>>>>>> 03894d7f5620e683d9b5201a705419b07ef29304
 ```
 
 From the figure we see that we get the correct distribution when using rejection sampling. 
@@ -300,9 +305,9 @@ b_{+} = \sqrt{(\alpha + 1)^{\alpha + 1}e^{-\alpha - 1}}$$
 $$b_{-} = 0$$
 
 We can sample uniformly from $[0, a]\times[b_{-}, b_{+}]$ and select the set of samples that are also in $C_f$. Then $y = \frac{x_2}{x_1}$ will be Gamma($\alpha ,1$) distributed. Note that in the code below, we check if $(x_1, x_2) \in C_f$ on a log-scale as $\log a, \log b$ are more easily stored than $a, b$ when $\alpha$ become large. The equivalent condition becomes
-$$\log x_1 = \log a + \log u_1, \quad u_1 \sim U[0, 1]\\
-\log x_2 = \log b + \log u_2, \quad u_2 \sim U[0, 1] \\
-(x_1, x_2) \in C_f \Leftrightarrow 2 \log x_1 \leq (\alpha-1)(\log x_2 - \log x_1) - \exp\{\log x_2 - \log x_1\}$$.
+$$\log x_1 = \log a + \log u_1, \quad u_1 \sim U[0, 1]$$
+$$\log x_2 = \log b + \log u_2, \quad u_2 \sim U[0, 1]$$
+$$(x_1, x_2) \in C_f \Leftrightarrow 2 \log x_1 \leq (\alpha-1)(\log x_2 - \log x_1) - \exp\{\log x_2 - \log x_1\}.$$
 
 ```{r, echo = T, eval = T}
 large_gamma <- function(alpha, n=1){
@@ -340,7 +345,7 @@ We see that the computed mean and variance coincide with the theoretical mean an
 ```{r, echo = T, eval = T, out.width = "50%", fig.align = "center"}
 df16 = data.frame(data=G2)
 
-ggplot(df16, aes(x=data.samples)) + geom_histogram(data=df16, aes(x = data.samples, y=..density.., color="Sampled Function"), binwidth=0.2) + stat_function(fun=dgamma,geom = "line",size=1.6,aes(color='Analytical'),args = list(shape=alpha, rate = 1)) + ggtitle("The Gamma pdf - comparison of analytical and sampled density for large alpha") + labs(x='x', y='density', caption=paste('Comparison of the analytical density of the Gamma(', alpha, ',1) distribution (red line) \n and the sampled density (blue bars).'))
+ggplot(df16, aes(x=data.samples)) + geom_histogram(data=df16, aes(x = data.samples, y=..density.., color="Sampled Function"), binwidth=0.2) + stat_function(fun=dgamma,geom = "line",size=1.6,aes(color='Analytical'),args = list(shape=alpha, rate = 1)) + ggtitle("Gamma pdf - comparison of analytical and sampled density") + labs(x='x', y='density', caption=paste('Comparison of the analytical density of the Gamma(', alpha, ',1) distribution (red line) \n and the sampled density (blue bars).'))
 ```
 
 From the figure we see that we get the correct distribution when sampling using the ratio of uniforms method.
@@ -358,7 +363,7 @@ for (alpha in seq(2, 2000, 10)){
 
 df15 = data.frame(alpha = seq(5, 2000, 10), P_estimate = 1000/iterations)
 
-ggplot(df15, aes(x = alpha, y = P_estimate)) + geom_line() + ggtitle("Using ratio of uniforms to sample from the Gamma - acceptance probability") + labs(caption='Estimated acceptance probability as a function of alpha')
+ggplot(df15, aes(x = alpha, y = P_estimate)) + geom_line() + ggtitle("Sampling from the Gamma - acceptance probability") + labs(caption='Estimated acceptance probability as a function of alpha')
 ```
 From the plot we see that $P_accept$ decreases with larger $\alpha$ but seems to reach a lower bound as $\alpha$ approaches $2000$. This is as expected; with increasing $\alpha$, the pdf flattens out and the proportion of the area in $[0, a]\times[b_{-}, b_{+}]$ covered by $C_{f}$ is decreased. 
 
@@ -385,7 +390,6 @@ alpha = 1000
 beta = 1
 
 G = gamma2(alpha, beta, 10000)
-
 df17 <- data.frame(G)
 
 histo = hist(G$samples, plot=F)
@@ -582,19 +586,19 @@ cat("self-normalizing IS posterior mean estimate:", posterior_mean_SN, "\n")
 cat("Analytical posterior mean:", theoretical_mean)
 ```
 
-We observe a slight shift in the IS estimate of the posterior mean when assuming a different prior. This is as expected, as such an estimate will fall between the Monte Carlo estimate under a uniform prior ($\sim 0.62$) and the expectation of the prior $B \sim Beta(1, 5) \Leftarrow E(B) = 1 / (1+5) = 0.167$. 
+We observe a slight shift in the IS estimate of the posterior mean when assuming a different prior. This is as expected, as such an estimate will fall between the Monte Carlo estimate under a uniform prior (`r sum(y$samples)/n`) and the expectation of the prior $B \sim Beta(1, 5) \Leftarrow E(B) = 1 / (1+5) = 0.167$. 
 
-Under the uniform prior, we calculated the Monte Carlo estimate of the posterior mean to be $\sim 0.62$. We investigate what proportion of its mass the $Beta(1, 5)$ prior has on the left side of $0.62$
+We investigate what proportion of its mass the $Beta(1, 5)$ prior has on the left side of `r sum(y$samples)/n`.
 
 ```{r, eval=T, echo=T}
 dbeta2 = function(x){
   return(dbeta(x, 1, 5))
 }
-est = 0.62
+est = sum(y$samples)/n
 cat(paste('Mass left of x =',est,':', integrate(dbeta2, 0, est)$value))
 ```
 
-We observe that $Beta(1,5)$ has the majority of its mass to the left of our Monte Carlo posterior mean estimate. Assuming the $Beta(1,5)$ prior is reasonable if we have a priori knowledge that $\theta$ might be much smaller than $0.62$.   
+We observe that $Beta(1,5)$ has the majority of its mass to the left of our Monte Carlo posterior mean estimate. Assuming the $Beta(1,5)$ prior is reasonable if we have a priori knowledge that $\theta$ might be much smaller than $0.62$. Here, however, this does not seem reasonable to assume. 
 
 Simply by assuming a new prior, we have induced a non-negligible change in the estimate of the posterior mean. In this case, it is probable that the $Beta(1,5)$ prior brings us away from the true distribution of $\theta$. This is an example of the dangers associated with the Bayesian approach; while assuming a reasonable prior may give increased accuracy in the results, wrong assumptions may induce a bias. Some might call this another facet of the bias-variance trade-off. 
 
