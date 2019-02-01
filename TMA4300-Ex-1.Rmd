@@ -583,19 +583,19 @@ cat("self-normalizing IS posterior mean estimate:", posterior_mean_SN, "\n")
 cat("Analytical posterior mean:", theoretical_mean)
 ```
 
-We observe a slight shift in the IS estimate of the posterior mean when assuming a different prior. This is as expected, as such an estimate will fall between the Monte Carlo estimate under a uniform prior ($\sim 0.62$) and the expectation of the prior $B \sim Beta(1, 5) \Leftarrow E(B) = 1 / (1+5) = 0.167$. 
+We observe a slight shift in the IS estimate of the posterior mean when assuming a different prior. This is as expected, as such an estimate will fall between the Monte Carlo estimate under a uniform prior (`r cat(sum(y$samples)/n)`) and the expectation of the prior $B \sim Beta(1, 5) \Leftarrow E(B) = 1 / (1+5) = 0.167$. 
 
-Under the uniform prior, we calculated the Monte Carlo estimate of the posterior mean to be $\sim 0.62$. We investigate what proportion of its mass the $Beta(1, 5)$ prior has on the left side of $0.62$
+We investigate what proportion of its mass the $Beta(1, 5)$ prior has on the left side of `r cat(sum(y$samples)/n)`.
 
 ```{r, eval=T, echo=T}
 dbeta2 = function(x){
   return(dbeta(x, 1, 5))
 }
-est = 0.62
+est = sum(y$samples)/n
 cat(paste('Mass left of x =',est,':', integrate(dbeta2, 0, est)$value))
 ```
 
-We observe that $Beta(1,5)$ has the majority of its mass to the left of our Monte Carlo posterior mean estimate. Assuming the $Beta(1,5)$ prior is reasonable if we have a priori knowledge that $\theta$ might be much smaller than $0.62$.   
+We observe that $Beta(1,5)$ has the majority of its mass to the left of our Monte Carlo posterior mean estimate. Assuming the $Beta(1,5)$ prior is reasonable if we have a priori knowledge that $\theta$ might be much smaller than $0.62$. Here, however, this does not seem reasonable to assume. 
 
 Simply by assuming a new prior, we have induced a non-negligible change in the estimate of the posterior mean. In this case, it is probable that the $Beta(1,5)$ prior brings us away from the true distribution of $\theta$. This is an example of the dangers associated with the Bayesian approach; while assuming a reasonable prior may give increased accuracy in the results, wrong assumptions may induce a bias. Some might call this another facet of the bias-variance trade-off. 
 
