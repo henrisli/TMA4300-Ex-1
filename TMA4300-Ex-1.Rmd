@@ -9,7 +9,7 @@ output:
     toc_depth: 2
     toc_float: yes
 date: "`r format(Sys.time(), '%d.%m.%Y')`"
-subtitle: 'Group members: Henrik Syversveen Lie, Mikal Stapnes (SKRIVE STUDENTNUMMER I STEDET??)'
+subtitle: 'Group members: Henrik Syversveen Lie, Mikal Solberg Stapnes'
 ---
 
 
@@ -305,7 +305,7 @@ $$(x_1, x_2) \in C_f \Leftrightarrow 2 \log x_1 \leq (\alpha-1)(\log x_2 - \log 
 
 ```{r, echo = T, eval = T}
 large_gamma <- function(alpha, n=1){
-  #log transformations of a and b+
+  # Log transformations of a and b+
   loga = 1/2 * (alpha - 1) * (log(alpha - 1) - 1)
   logb = 1/2 * (alpha + 1) * (log(alpha + 1) - 1)
   result = vector(mode="numeric")
@@ -316,7 +316,7 @@ large_gamma <- function(alpha, n=1){
     iter = iter + 1 
     log_x_1 = loga + log(runif(1))
     log_x_2 = logb + log(runif(1))
-    #equivalent condition of (x_1, x_2) in C_f
+    # Equivalent condition of (x_1, x_2) in C_f
     if (2*log_x_1 <= (alpha - 1)*(log_x_2 - log_x_1) - exp(log_x_2 - log_x_1)){
       result = append(result, exp(log_x_2 - log_x_1))
       i = i + 1
@@ -349,9 +349,9 @@ We wish to investigate in what manner $\alpha$ affects the acceptance probabilit
 iterations = c()
 
 for (alpha in seq(2, 2000, 10)){
-  #Sample 1000 gamma variables for a particular alpha
+  # Sample 1000 gamma variables for a particular alpha
   G = large_gamma(alpha, 1000)
-  #Iter is here the average over all 1000 samples
+  # Iter is here the average over all 1000 samples
   iterations = append(iterations, G$iter)
 }
 
