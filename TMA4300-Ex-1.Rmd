@@ -609,5 +609,3 @@ We observe that $Beta(1,5)$ has the majority of its mass for small $\theta$. Ass
 
 Simply by assuming a prior, we have induced a non-negligible change in the estimate of the posterior mean. In this case, it is possible that the $Beta(1,5)$ prior brings us away from the true distribution of $\theta$. This is an example of the power and dangers of the Bayesian approach; while assuming a reasonable prior may give increased accuracy in the results, wrong assumptions may induce a bias. Some might call this another facet of the bias-variance trade-off. 
 
-
-
