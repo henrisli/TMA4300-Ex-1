@@ -210,56 +210,52 @@ $$ f_X(x) = \begin{cases}
 0, \quad &\text{otherwise}, \\
 \end{cases} $$
 
-using rejection sampling with the distribution $g(x)$ found in A.2 as a proposal distribution. We can do this because $g(x)$ is nonzero at all points where $f(x)$ is nonzero. 
+using rejection sampling with the distribution $g(x)$ found in A.2 as a proposal distribution. We can do this because $g(x)$ is nonzero at all points where $f_X(x)$ is nonzero. As a result, we can find $c$ s.t. $f_X(x) \leq cg(x)$ for all $x$. 
 
-We note that the acceptance probabiltiy, $P_{accept}$, 
-
-$$P_{accept} = \int_0^{\infty} \frac{f_X(x)}{c g(x)} g(x)dx = c^{-1}.$$
+To generate $n$ samples from $f_X(x)$ we sample from $X \sim g(x)$ and $U \sim u[0, 1]$, and accept the sample $x$ if $u \leq \frac{f_X(x)}{c g(x)}$. We note that the overall acceptance probabiltiy, $P_{\text{accept}}$, is
+$$P_{\text{accept}} = P\bigg(U\leq \frac{1}{c}\frac{f_X(x)}{g(x)}\bigg) = \int_0^{\infty} \frac{f_X(x)}{c g(x)} g(x)dx = c^{-1}.$$
  
-To maximize this acceptance probability, we can minimize $c$ by choosing
+To maximize this acceptance probability, we minimize $c$ by choosing
 
 $$ c = \underset{x}{\sup} \frac{f_X(x)}{g(x)} = \underset{x}{\sup} \begin{cases}
 \frac{e^{-x}(\frac{1}{\alpha} + \frac{1}{e})}{\Gamma(\alpha)}, \quad 0 \leq x \le 1 \\
 \frac{x^{\alpha - 1} (\frac{1}{\alpha} + \frac{1}{e})}{\Gamma(\alpha)}, \quad 1 \leq x
-\end{cases}$$
+\end{cases},$$
+which gives $c = \frac{(\frac{1}{\alpha} + \frac{1}{e})}{\Gamma(\alpha)}$.
 
-Which means $c = \frac{(\frac{1}{\alpha} + \frac{1}{e})}{\Gamma(\alpha)}$
-
-To generate $n$ samples from $f(x)$ we sample from $X \sim g(x)$ and $U \sim u[0, 1]$, and accept the sample $x$ if $u \leq \frac{f(x)}{c g(x)}$. We repeat the process until $n$ samples are accepted. 
-
+We implement a function in R that generates $n$ samples from $f_X(x)$ by the rejection algorithm.
 ```{r, echo = T, eval = T}
 small_gamma = function(alpha, n=1){
   result = vector()
   iter = 0
   sampled = 0
-  c = 1/(gamma(alpha)) * (1/alpha + exp(-1))
+  c = (1/alpha + exp(-1))/gamma(alpha)
   
   while(sampled < n){
 
-    # Sample from g(x)
-    uniform2 = runif(n)
+    # Sample n realizations from g(x)
     x = G_inv(n, alpha)
-    # Compute the acceptance probabilites
+    # Compute the acceptance probabilites for the n realizations
     probs = dgamma(x, alpha, rate=1) / (c * as.double(g(x, alpha)))
+    # Generate n samples from U(0,1)
+    u = runif(n)
     # Append samples where u < f(x) / c g(x)
-    result = append(result, x[uniform2 <= probs])
+    result = append(result, x[u <= probs])
     # Increase counters
-    sampled = sampled + sum(uniform2 <= probs)
-    iter = iter + n
-  }
-  
+    sampled = sampled + sum(u <= probs)
+    iter = iter + n}
+  # If redundant samples were generated, we do not want to count these as iterations
   iter = iter - length(result) + n
-  
-  return(list(samples = result[seq(1:n)], iter = iter))
-}
+  # If redundant samples were generated, return only n samples
+  return(list(samples = result[seq(1:n)], iter = iter))}
 ```
 
 We compare the sample mean and variance with the theoretical mean and variance and compare the sampled density with the analytical density. 
 
 ```{r, echo = T, eval = T}
 alpha = 0.95
-G1 <- small_gamma(alpha, 10000)
-df12 = data.frame(G1)
+G1 <- small_gamma(alpha, 10000) # Generate samples
+df = data.frame(G1) # Put samples in dataframe to prepare for plotting
 
 cat('Theoretical mean: ', alpha,' Computed mean: ', mean(G1$samples),'\n')
 cat('Theoretical variance: ', alpha, ' Computed variance: ', var(G1$samples))
@@ -268,30 +264,31 @@ cat('Theoretical variance: ', alpha, ' Computed variance: ', var(G1$samples))
 We see that the computed mean and variance coincide with the theoretical mean and variance.
 
 ```{r, echo = T, eval = T, out.width = "50%", fig.align = "center"}
-ggplot(data=df12, aes(x=samples)) + geom_histogram(data=df12, aes(x=samples, y=..density.., color="Sampled"), binwidth=0.1) +  stat_function(fun=dgamma, geom = "line",size=1.6, args = list(shape=alpha, rate=1), aes(x=samples, color = "Analytical")) + ggtitle("Gamma pdf - comparison of analytical and sampled density") + ylim(0. ,2.0) + labs(x='x', y='density', caption=paste('Comparison of the analytical density of the Gamma(', alpha, ',1) distribution (red line) \n and the sampled density (blue bars).'))
+ggplot(data=df, aes(x=samples)) + geom_histogram(data=df, aes(x=samples, y=..density.., color="Sampled"), binwidth=0.1) +  stat_function(fun=dgamma, geom = "line",size=1.6, args = list(shape=alpha, rate=1), aes(x=samples, color = "Analytical")) + ggtitle("Gamma pdf - comparison of analytical and sampled density") + ylim(0. ,2.0) + labs(x='x', y='density', caption=paste('Comparison of the analytical density of the Gamma(', alpha, ',1) distribution (red line) \n and the sampled density (blue bars).'))
 ```
 
-From the figure we see that we get the correct distribution when using rejection sampling. 
+From the figure we see that we get the correct distribution when using rejection sampling.
 
 ## 2.
 
-As we remove the limitation on $\alpha$, we no longer get a closed form expression for the $c$ giving the highest acceptance probability. Instead, we may use the ratio of uniforms method to sample from the Gamma with parameters $\alpha > 1$, $\beta = 1$. We define the area
+As we remove the limitation on $\alpha$, we no longer get a closed form expression for the $c$ giving the highest acceptance probability. Instead, we may use the ratio of uniforms method to sample from the Gamma distribution with parameters $\alpha > 1$, $\beta = 1$. We define the area $C_f$,
 
 $$C_f = \bigg \{(x_1, x_2): 0 \leq x_1 \leq \sqrt{f^*(\frac{x_2}{x_1})} \bigg \}, \quad f^*(x) = \begin{cases}
 x^{\alpha-1}e^{-x}, \quad 0 < x, \\
 0, \quad \text{otherwise}.
 \end{cases}$$ 
+Then we note that $y = x_2 / x_1$ will be Gamma-distributed if sampled uniformly inside $C_f$. By finding 
 
-And note that $y = x_2 / x_1$ will be Gamma-distributed if sampled uniformly inside $C_f$. By finding 
-
-$$ a = \sqrt{(\underset{x}{\sup} f^* (x)}, \quad b_{+} = \sqrt{ \underset{x\geq 0}{\sup} x^2 f^* (x)} , \quad b_{\_} = - \sqrt{\underset{x \leq 0}{\sup} x^2 f^* (x)}$$
+$$ a = \sqrt{\sup_x f^* (x)}, \quad b_{+} = \sqrt{ \sup_{x\geq 0} x^2 f^* (x)} , \quad b_{\_} = - \sqrt{\sup_{x \leq 0} x^2 f^* (x)}$$
 
 
-$$ (f^*(x))' = 0 \Leftrightarrow x^{\alpha-2}e^{-x}(\alpha - 1  - x) = 0 \Rightarrow x = \alpha - 1 \\
-a = \sqrt{(\alpha - 1)^{\alpha - 1}e^{1-\alpha}}$$
+\begin{align*} (f^\ast(x))' &= 0 \Leftrightarrow x^{\alpha-2}e^{-x}(\alpha - 1  - x) = 0 \Rightarrow x = \alpha - 1 \\
+a &= \sqrt{(\alpha - 1)^{\alpha - 1}e^{1-\alpha}}
+\end{align*}
 
-$$(x^2 f^*(x))' = 0 \Leftrightarrow x^{\alpha}e^{-x}(\alpha + 1 - x) = 0 \\
-b_{+} = \sqrt{(\alpha + 1)^{\alpha + 1}e^{-\alpha - 1}}$$
+\begin{align*}(x^2 f^\ast(x))' &= 0 \Leftrightarrow x^{\alpha}e^{-x}(\alpha + 1 - x) = 0 \\
+b_{+} &= \sqrt{(\alpha + 1)^{\alpha + 1}e^{-\alpha - 1}}
+\end{align*}
 
 $$b_{-} = 0$$
 
