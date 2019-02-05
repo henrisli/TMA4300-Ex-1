@@ -469,14 +469,19 @@ $$ f(\theta \lvert \mathbf{y}) \propto (2 + \theta)^{y_1}(1-\theta)^{y_2 + y_3}\
 
 We construct a rejection sampling algorithm to sample from $f(\theta|\mathbf{y})$ using $U(0,1)$ as the proposal density. The uniform density is nonzero for all points where $f(\theta | \mathbf{y})$ is nonzero. As a result, we can use it as a proposal density. We get the following algorithm.
 ```{r, echo = T, eval = T}
-# The unscaled density. Note that in the text we denote f as the actual density. 
-f <- function(x){
+# The unscaled density
+f_unscaled <- function(x){
   return((2+x)^125*(1-x)^38*x^34)
 }
+
+# Find the normalizing constant of f.
+N_C = integrate(f_unscaled,0,1)$value 
+
+#The normalized density. Corresponds to f in the text. 
+f <- function(x){return(f_unscaled(x)/N_C)}
+
 #Find c in f(x) / c g(x) by finding the maximum value of f(x). optimum$objective will then equal sup{f(x)}
 optimum = optimize(f,c(0,1),maximum = TRUE)
-
-N_C = integrate(f,0,1)$value # Find the normalizing constant of f
 
 draw_samples <- function(n){
   samples <- rep(NA,n)
@@ -503,20 +508,18 @@ Now we want to estimate the posterior mean $\theta$ by Monte-Carlo integration u
 
 ```{r, echo 0 T, eval = T, out.width = "50%", fig.align = "center"}
 n = 10000
-# The following function is integrated from 0 to 1 to find the theoretical mean
+# The function x*f(x) is integrated from 0 to 1 to find the theoretical mean
 g <- function(x){return(x*f(x))}
 
-#f_density is f / NC, where NC is the normalizing constant of f. 
-f_density <- function(x){return(f(x)/N_C)}
-
-y <- draw_samples(n) # Draw samples from the distribution f(theta|y)
+# Draw samples from the distribution f(theta|y)
+y <- draw_samples(n) 
 
 cat("Computed mean: ", sum(y$samples)/n, '\n')
-cat("Theoretical mean: ", integrate(g,0,1)$value/N_C, '\n')
+cat("Theoretical mean: ", integrate(g,0,1)$value, '\n')
 
 df <- data.frame(theo=seq(0,1,length.out=n), value=y$samples)
 
-ggplot(df, aes(x = value)) + geom_histogram(aes(y = ..density.., colour = "Sampled"), binwidth=0.001) + stat_function(fun=f_density,geom = "line",size=1.6,aes(colour="Analytical")) + ggtitle("Comparison of analytical and sampled density") + xlim(0,1) + geom_segment(x = sum(y$samples)/n, xend = sum(y$samples)/n, y = 0, yend = 100, aes(colour = "Mean"), size = 1.2, linetype = "longdash") + labs(x='x', y='density', caption=paste('Comparison of the sampled density of f(theta|y) (blue bars) \n and the analytical density distribution (red line). \n The estimated posterior mean (green line) is indicated.'))
+ggplot(df, aes(x = value)) + geom_histogram(aes(y = ..density.., colour = "Sampled"), binwidth=0.001) + stat_function(fun=f,geom = "line",size=1.6,aes(colour="Analytical")) + ggtitle("Comparison of analytical and sampled density") + xlim(0,1) + geom_segment(x = sum(y$samples)/n, xend = sum(y$samples)/n, y = 0, yend = 100, aes(colour = "Mean"), size = 1.2, linetype = "longdash") + labs(x='x', y='density', caption=paste('Comparison of the sampled density of f(theta|y) (blue bars) \n and the analytical density distribution (red line). \n The estimated posterior mean (green line) is indicated.'))
 ```
 
 The theoretical mean is found by numerically integrating $\text{E}(X) = \int_0^1 x f(x)dx$, and we see that it coincides well with the estimated posterior mean. From the figure we see that the density of the sample in the histogram also coincides well with the analytical density distribution, so we conclude that the sampling algorithm is correct. Also, the indicated estimated posterior mean looks reasonable, considering the density distribution.
@@ -526,7 +529,7 @@ In theory, we would expect the rejection sampling algorithm to generate $c \geq 
 
 ```{r, echo = T, eval = T}
 cat("Average random numbers generated: ", y$iterations/n, '\n')
-cat("Theoretical expected number: ", optimum$objective/N_C)
+cat("Theoretical expected number: ", optimum$objective)
 ```
 
 Again, we see that the average number from the sample coincide well with the theoretical expected number.
@@ -550,7 +553,7 @@ $$ \hat{\mu}_{IS} = \frac{1}{n} \sum \theta_i w_i.$$
 ```{r, echo = T, eval = T}
 #The new unscaled posterior target pdf, NC * f_new
 unscaled_posterior_target = function(x){
-  return(f_density(x)*dbeta(x, 1, 5))}
+  return(f(x)*dbeta(x, 1, 5))}
 
 #Compute the normalizing constant of f_new
 NC_posterior = integrate(unscaled_posterior_target, 0, 1)$value
@@ -565,20 +568,20 @@ posterior_target_mean_density = function(x){
 
 theoretical_mean = integrate(posterior_target_mean_density, 0, 1)$value
 
-weights = posterior_target(y$samples) / f_density(y$samples)
+weights = posterior_target(y$samples) / f(y$samples)
 posterior_mean = sum(y$samples*weights) / n
 cat("IS posterior mean estimate:", posterior_mean, "\n")
 cat("Analytical posterior mean:", theoretical_mean)
 ```
 
-We see that the IS posterior mean estimate is close to the analytical mean. We suspect that the target and proposal densities are sufficiently close such that the bias introduced by estimating the new mean based on the already generated samples is sufficiently small. 
+We see that the IS posterior mean estimate is close to the analytical mean. The target and proposal densities are sufficiently close such that the bias introduced by estimating the new mean based on the already generated samples is sufficiently small. 
 
 We have here computed the normalizing constant of the posterior. If this was not numerically feasible, we could use the self-normalizing importance sampling estimate of the posterior mean
 
 $$ \tilde{\mu}_{IS} = \frac{\sum \theta_i w_i }{\sum w_i}.$$
 
 ```{r}
-unscaled_weights = unscaled_posterior_target(y$samples) / f(y$samples)
+unscaled_weights = unscaled_posterior_target(y$samples) / f_unscaled(y$samples)
 posterior_mean_SN = sum(y$samples*unscaled_weights) / (sum(unscaled_weights))
 
 cat("self-normalizing IS posterior mean estimate:", posterior_mean_SN, "\n")
