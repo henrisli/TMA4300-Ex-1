@@ -26,7 +26,7 @@ opts_chunk$set(tidy.opts = list(width.cutoff = 68), tidy = TRUE, warning = FALSE
 We make a function that draws $n$ random numbers from an exponential distribution with parameter $\lambda$. If $u$ is uniformly distributed between 0 and 1, $u\sim U(0,1)$, then $x=-\log(u)/\lambda$ will be exponentially distributed with parameter $\lambda$, or $x\sim \text{Exp}(\lambda)$.
 ```{r, echo = T, eval = T}
 library(ggplot2) # Load library for plotting
-exponential<- function(lambda, n=1){
+exponential<- function(lambda, n=1){ # Make default n = 1
   u = runif(n) # Draw uniformly distributed variables
   x = -1/lambda*log(u) # Do transformation to get exp. distr. variables 
   return(x)
@@ -34,26 +34,24 @@ exponential<- function(lambda, n=1){
 ```
 Then we want to check if this function is correct. To do this, we check a few things. Firstly we compare the mean and variance of a sample drawn from our function with the theoretical mean and variance. The theoretical mean and variance of a exponential distribution are $\mu = 1/\lambda$ and $\sigma^2 = 1/\lambda^2$. We draw a sample with $\lambda = 4.300$ and compare:
 ```{r, echo = T, eval = T}
-n = 10000
+n = 10000 # Number of samples
 lambda = 4.300
 x = exponential(lambda,n) # Draw samples from created function
 cat('Theoretical mean: ', 1/lambda,' Computed mean: ', mean(x),'\n')
 cat('Theoretical variance: ', 1/lambda^2, ' Computed variance: ', var(x))
 ```
-We see that they are almost the same. Finally we make two plots. The first is a histogram comparison of our function and the R function `rexp()`, which draws random samples from an exponential distribution. The second plot is a histogram of our random sample compared with the analytical exponential distribution.
+We see that they are almost the same. Finally we plot a histogram of our random sample compared with the analytical exponential distribution.
 ```{r, echo = T, eval = T, out.width = "50%", fig.align = "center"}
 # Prepare generated samples for plotting by putting them in a dataframe 
 df2 <- data.frame(theo=seq(0,max(x),length.out=n), x=x)
 # Plot the data
-ggplot(df2, aes(x = x)) + geom_histogram(aes(y = ..density.., color = "Sampled"), binwidth=0.05) + stat_function(fun=dexp,geom = "line",size=1.6,args = (mean=lambda),aes(color="Analytical")) + ggtitle("The exponential pdf - comparison of analytical and sampled density") + labs(x='x', y='density', caption='Comparison of the analytical density of the exponential distribution (red line) and the sampled density (blue bars).')
+ggplot(df2, aes(x = x)) + geom_histogram(aes(y = ..density.., color = "Sampled"), binwidth=0.01) + stat_function(fun=dexp,geom = "line",size=1.6,args = (mean=lambda),aes(color="Analytical")) + ggtitle("The exponential pdf - comparison of analytical and sampled density") + labs(x='x', y='density', caption='Comparison of the analytical density of the exponential distribution (red line) and the sampled density (blue bars).')
 ```
 
-From the figure we see that the density of our samples overlaps with the analytical density and can thus conclude that our algorithm is correct. 
+From the figure we see that the density of our samples overlaps with the analytical density and can thus conclude that our algorithm is correct.
 
 ## 2.
-
-We wish to sample from the pdf 
-
+We wish to sample from the pdf
 $$g(x) = \begin{cases} c x^{\alpha - 1}, \quad 0 < x < 1, \\
 c e^{-x}, \quad 1 \leq x, \\
 0, \quad otherwise.
@@ -80,9 +78,10 @@ We compare results in R.
 g = function(x, alpha){
   c = alpha*exp(1)/(alpha+exp(1))
   result = vector(length = length(x))
-  result[x<1.] = sapply(x[x<1.], function(x) c*x^(alpha - 1))
-  result[x>=1.] = sapply(x[x>=1.], function(x) c*exp(-x))
+  result[x<1.] = c*x[x<1.]^(alpha-1)
+  result[x>=1.] = c*exp(-x[x>=1.])
   return(as.double(result))}
+
 # The following function returns n from the density function g(x)
 # by doing inversion sampling
 G_inv = function(n, alpha){
@@ -93,8 +92,8 @@ G_inv = function(n, alpha){
   result[u >= c/alpha] = -log(1/alpha + exp(-1) - u[u >= c/alpha]/c)
   return(result)}
 
-alpha = 2.5
-n = 10000
+alpha = 0.4300
+n = 100000
 xsamples = G_inv(n, alpha) # Sample from the density function g(x) by inversion sampling
 c = alpha*exp(1)/(alpha+exp(1))
 mean = c/(alpha+1) + 2*c/exp(1)
@@ -110,25 +109,22 @@ variance = c/(alpha+2)+5*c/exp(1) - mean^2
 cat('Theoretical variance: ', variance, ' Sampled variance: ', var(xsamples))
 ```
 
-We see that the sampled mean and variance coincide with the theoretical mean and variance.
-
-Finally we plot a histogram of the sample and compare it to the density function $g(x)$.
+We see that the sampled mean and variance coincide with the theoretical mean and variance. To conclude on the correctness of our algorithm, we also make a histogram of the sample and compare it to the density function $g(x)$.
 
 ```{r, echo = T, eval = T, out.width = "50%", fig.align = "center"}
 # Prepare generated samples for plotting by putting them in a dataframe 
 df2 <- data.frame(theo=seq(0,max(xsamples),length.out=n), value=xsamples)
 # Plot the data
-ggplot(df2, aes(x = value)) + geom_histogram(aes(y = ..density.., color='Sampled'), binwidth=0.1) + stat_function(fun=g,geom = "line",size=1., args = (mean=alpha), alpha=1., aes(color="Analytical")) + ggtitle("g(x), Comparison of analytical and sampled density") + labs(x='x', y='density', caption=paste('Comparison of the analytical density of g(x) (red line) \n and the sampled density (blue bars).'))
+ggplot(df2, aes(x = value)) + geom_histogram(aes(y = ..density.., color='Sampled'), binwidth=0.15) + stat_function(fun=g,geom = "line",size=1., args = (mean=alpha), alpha = 1., aes(color="Analytical")) + ggtitle("g(x), Comparison of analytical and sampled density") + ylim(0,2) + xlim(0,5)+labs(x='x', y='density', caption=paste('Comparison of the analytical density of g(x) (red line) \n and the sampled density (blue bars).'))
 ```
 
-From the figure we see that the analytical density overlaps with the sampled density, confirming the our algorithm is correct.
+From the figure we see that the analytical density overlaps with the sampled density, confirming that our algorithm is correct.
 
 ## 3.
 
 To simulate from the standard normal distribution, we implement a function that performs the Box-Müller transformation. Given $x_1 \sim U(0,1)$ and $x_2 \sim \text{Exp}(1/2)$, we have that $y_1 = \sqrt{x_2}\cos{(2\pi x_1)}$ and $y_2 = \sqrt{x_2}\sin{(2\pi x_1)}$ will be i.i.d. standard normal. To sample from the exponential distribution, we use the `exponential` function implemented earlier. The following function implements the Box-Müller transformation to generate $n$ independent samples from the standard normal distribution. To reduce runtime of the algorithm, we assume $n$ to be an even number, so that we can generate only $n/2$ samples from the uniform and exponential distributions and use both $y_1$ and $y_2$.
 ```{r, echo = T, eval = T}
-# Function to draw n i.i.d. Normal(0,1) variables
-# based on Box-Muller transform
+# Function to draw n i.i.d. Normal(0,1) variables based on Box-Muller transform
 normal <- function(n){
   x_1 <- runif(n/2)
   x_2 <- exponential(1/2, n/2)
@@ -149,11 +145,11 @@ We see that the computed mean and variance coincide with the theoretical mean an
 
 Finally we make a histogram of our sample and compare it with the analytical density of the standard normal distribution. In addition, we provide a Q-Q plot to check normality of the data.
 
-```{r, echo = T, eval = T, out.width = "50%", fig.align = "center"}
+```{r, echo = T, eval = T, out.width = "50%"}
 # Prepare generated samples for plotting by putting them in a dataframe 
 df2 <- data.frame(theo=seq(0,max(x),length.out=n), value=x)
 # Plot the data
-ggplot(df2, aes(x = value)) + geom_histogram(aes(y = ..density..), binwidth=0.1, col = 'blue', fill = 'blue') + stat_function(fun=dnorm,geom = "line",size=1.6,col="red",args = list(mean=0, sd = 1)) + ggtitle("The normal pdf - comparison of analytical and sampled density") + labs(x='x', y='density', caption=paste('Comparison of the analytical density of the Normal(0, 1) distribution (red line) \n and the sampled density (blue bars).'))
+ggplot(df2, aes(x = value)) + geom_histogram(aes(y = ..density.., col = "Sampled"), binwidth=0.1) + stat_function(fun=dnorm,aes(col = "Analytical"),geom = "line",size=1.6,args = list(mean=0, sd = 1)) + ggtitle("The normal pdf - comparison of analytical and sampled density") + labs(x='x', y='density', caption=paste('Comparison of the analytical density of the Normal(0, 1) distribution (red line) \n and the sampled density (blue bars).'))
 # Make a qq-plot of the generated samples
 qqnorm(x, pch = 1, frame = FALSE)
 qqline(x, col = "steelblue", lwd = 2)
