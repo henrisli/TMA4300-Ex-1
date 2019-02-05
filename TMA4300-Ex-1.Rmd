@@ -145,20 +145,21 @@ We see that the computed mean and variance coincide with the theoretical mean an
 
 Finally we make a histogram of our sample and compare it with the analytical density of the standard normal distribution. In addition, we provide a Q-Q plot to check normality of the data.
 
-```{r, echo = T, eval = T, out.width = "50%"}
+```{r, echo = T, eval = T, out.width = "50%", fig.align = "center"}
 # Prepare generated samples for plotting by putting them in a dataframe 
 df2 <- data.frame(theo=seq(0,max(x),length.out=n), value=x)
 # Plot the data
 ggplot(df2, aes(x = value)) + geom_histogram(aes(y = ..density.., col = "Sampled"), binwidth=0.1) + stat_function(fun=dnorm,aes(col = "Analytical"),geom = "line",size=1.6,args = list(mean=0, sd = 1)) + ggtitle("The normal pdf - comparison of analytical and sampled density") + labs(x='x', y='density', caption=paste('Comparison of the analytical density of the Normal(0, 1) distribution (red line) \n and the sampled density (blue bars).'))
+
 # Make a qq-plot of the generated samples
 qqnorm(x, pch = 1, frame = FALSE)
 qqline(x, col = "steelblue", lwd = 2)
 ```
 
-Also here, the histogram coincides well with the standard normal density function, so we conclude that our algorithm is correct. Lastly, the sampled points in the Q-Q plot coincide with the analytical line.
+Also here, the histogram coincides well with the standard normal density function. Lastly, the sampled points in the Q-Q plot coincide with the analytical line, so we conclude that our algorithm is correct.
 
 ## 4.
-We now implement a function that generates samples from a $d$-variate normal distribution with mean vector $\mu$ and covariance matrix $\Sigma$. We use the function `normal`, which we created in task A.3. to generate $d$ i.i.d. standard normal samples. Then we use the transformation $y = \mu + Ax \sim N(\mu, A A^T)$, with $AA^T=\Sigma$ and $x$ being a vector with the independent standard normal samples. We use the Cholesky decomposition for A.
+We now implement a function that generates samples from a $d$-variate normal distribution with mean vector $\mu$ and covariance matrix $\Sigma$. We use the function `normal`, which we created in task A.3. to generate $d$ i.i.d. standard normal samples. Then we use the transformation $y = \mu + Ax \sim N(\mu, A A^T)$, with $AA^T=\Sigma$ and $x$ being a vector with the independent standard normal samples. We use the Cholesky decomposition for $A$.
 ```{r, echo = T, eval = T}
 # Function to draw one sample of a d-variate Normal(mu, sigma) variable
 # The function uses a transformation of d i.i.d. Normal(0,1) variables
@@ -180,7 +181,7 @@ sample = matrix(NA, ncol = d, nrow = n) # Prepare to draw samples
 for (i in 1:n){
   sample[i,] <- normal_d(d,mu,sigma) # Draw n samples
 }
-average = apply(sample, 2,mean)
+average = apply(sample, 2, mean)
 cat('Mean vector: \n')
 average
 covmat = cov(sample)
@@ -204,7 +205,7 @@ Both p-values are above any reasonable significance level, which does not reject
 
 We can sample from the Gamma distribution with $\alpha \in (0, 1)$ and $\beta = 1$,
 
-$$ f(x) = \begin{cases}
+$$ f_X(x) = \begin{cases}
 \frac{1}{\Gamma(\alpha)}x^{\alpha-1}e^{-x}, \quad & 0<x,\\
 0, \quad &\text{otherwise}, \\
 \end{cases} $$
@@ -213,14 +214,14 @@ using rejection sampling with the distribution $g(x)$ found in A.2 as a proposal
 
 We note that the acceptance probabiltiy, $P_{accept}$, 
 
-$$P_{accept} = \int_0^{\infty} \frac{f(x)}{c g(x)} g(x)dx = c^{-1}.$$
+$$P_{accept} = \int_0^{\infty} \frac{f_X(x)}{c g(x)} g(x)dx = c^{-1}.$$
  
 To maximize this acceptance probability, we can minimize $c$ by choosing
 
-$$ c = \underset{x}{\sup} \frac{f(x)}{g(x)} = \underset{x}{\sup} \begin{cases}
+$$ c = \underset{x}{\sup} \frac{f_X(x)}{g(x)} = \underset{x}{\sup} \begin{cases}
 \frac{e^{-x}(\frac{1}{\alpha} + \frac{1}{e})}{\Gamma(\alpha)}, \quad 0 \leq x \le 1 \\
 \frac{x^{\alpha - 1} (\frac{1}{\alpha} + \frac{1}{e})}{\Gamma(\alpha)}, \quad 1 \leq x
-\end{cases}$$ 
+\end{cases}$$
 
 Which means $c = \frac{(\frac{1}{\alpha} + \frac{1}{e})}{\Gamma(\alpha)}$
 
