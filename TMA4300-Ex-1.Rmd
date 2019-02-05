@@ -539,11 +539,11 @@ $$\pi_{new} = Beta(1,5).$$
 
 We then get the new posterior pdf
 
-$$ f_{new}(\theta \lvert \bf{y}) \propto (2 + \theta)^{y_1} ( 1 - \theta)^{y_2 + y_3}\theta^{y_4} \frac{\Gamma(1+5)}{\Gamma(1) \Gamma(5)} \theta^{0} (1-\theta)^{4}.$$
+$$ f_{new}(\theta \lvert \mathbf{y}) \propto (2 + \theta)^{y_1} ( 1 - \theta)^{y_2 + y_3}\theta^{y_4} \frac{\Gamma(1+5)}{\Gamma(1) \Gamma(5)} \theta^{0} (1-\theta)^{4}.$$
 
 To be computationally efficient, we may wish to use importance sampling on the batch of samples already generated under the uniform prior. Using $f_{new}$ as the target density and $f_{old},$
 
-$$ f_{old}(\theta \lvert y) \propto (2 + \theta)^{y_1} ( 1 - \theta)^{y_2 + y_3}\theta^{y_4}$$
+$$ f_{old}(\theta \lvert \mathbf{y}) \propto (2 + \theta)^{y_1} ( 1 - \theta)^{y_2 + y_3}\theta^{y_4}$$
 
 as the proposal density we get the weights. 
 
