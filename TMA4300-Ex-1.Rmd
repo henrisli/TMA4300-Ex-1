@@ -276,23 +276,25 @@ As we remove the limitation on $\alpha$, we no longer get a closed form expressi
 $$C_f = \bigg \{(x_1, x_2): 0 \leq x_1 \leq \sqrt{f^*(\frac{x_2}{x_1})} \bigg \}, \quad f^*(x) = \begin{cases}
 x^{\alpha-1}e^{-x}, \quad 0 < x, \\
 0, \quad \text{otherwise}.
-\end{cases}$$ 
+\end{cases}$$
 Then we note that $y = x_2 / x_1$ will be Gamma-distributed if sampled uniformly inside $C_f$. By finding 
 
-$$ a = \sqrt{\sup_x f^* (x)}, \quad b_{+} = \sqrt{ \sup_{x\geq 0} x^2 f^* (x)} , \quad b_{\_} = - \sqrt{\sup_{x \leq 0} x^2 f^* (x)}$$
+$$ a = \sqrt{\sup_x f^* (x)}, \quad b_{+} = \sqrt{ \sup_{x\geq 0} x^2 f^* (x)} , \quad b_{\_} = - \sqrt{\sup_{x \leq 0} x^2 f^* (x)},$$
 
 
-\begin{align*} (f^\ast(x))' &= 0 \Leftrightarrow x^{\alpha-2}e^{-x}(\alpha - 1  - x) = 0 \Rightarrow x = \alpha - 1 \\
-a &= \sqrt{(\alpha - 1)^{\alpha - 1}e^{1-\alpha}}
-\end{align*}
+\begin{gather*}
+(f^\ast(x))' = 0 \Leftrightarrow x^{\alpha-2}e^{-x}(\alpha - 1  - x) = 0 \Rightarrow x = \alpha - 1 \\
+a = \sqrt{(\alpha - 1)^{\alpha - 1}e^{1-\alpha}},
+\end{gather*}
 
-\begin{align*}(x^2 f^\ast(x))' &= 0 \Leftrightarrow x^{\alpha}e^{-x}(\alpha + 1 - x) = 0 \\
-b_{+} &= \sqrt{(\alpha + 1)^{\alpha + 1}e^{-\alpha - 1}}
-\end{align*}
+\begin{gather*}
+(x^2 f^\ast(x))' = 0 \Leftrightarrow x^{\alpha}e^{-x}(\alpha + 1 - x) = 0 \Rightarrow x = \alpha + 1 \\
+b_{+} = \sqrt{(\alpha + 1)^{\alpha + 1}e^{-\alpha - 1}},
+\end{gather*}
 
-$$b_{-} = 0$$
+$$b_{-} = 0,$$
 
-We can sample uniformly from $[0, a]\times[b_{-}, b_{+}]$ and select the set of samples that are also in $C_f$. Then $y = \frac{x_2}{x_1}$ will be Gamma($\alpha ,1$) distributed. Note that in the code below, we check if $(x_1, x_2) \in C_f$ on a log-scale as $\log a, \log b$ are more easily stored than $a, b$ when $\alpha$ become large. The equivalent condition becomes
+we can sample uniformly from $[0, a]\times[b_{-}, b_{+}]$ and select the set of samples that are also in $C_f$. Then $y = \frac{x_2}{x_1}$ will be Gamma($\alpha ,1$) distributed. Note that in the code below, we check if $(x_1, x_2) \in C_f$ on a log-scale as $\log a, \log b$ are more easily stored than $a, b$ when $\alpha$ becomes large. The equivalent condition becomes
 $$\log x_1 = \log a + \log u_1, \quad u_1 \sim U[0, 1]$$
 $$\log x_2 = \log b + \log u_2, \quad u_2 \sim U[0, 1]$$
 $$(x_1, x_2) \in C_f \Leftrightarrow 2 \log x_1 \leq (\alpha-1)(\log x_2 - \log x_1) - \exp\{\log x_2 - \log x_1\}.$$
@@ -304,26 +306,25 @@ large_gamma <- function(alpha, n=1){
   logb = 1/2 * (alpha + 1) * (log(alpha + 1) - 1)
   result = vector(mode="numeric")
   
-  i = 0
+  accepted_samples = 0
   iter = 0
-  while (i < n){
+  while (accepted_samples < n){
     iter = iter + 1 
     log_x_1 = loga + log(runif(1))
     log_x_2 = logb + log(runif(1))
-    # Equivalent condition of (x_1, x_2) in C_f
+    # Accept sample if equivalent condition of (x_1, x_2) in C_f is met
     if (2*log_x_1 <= (alpha - 1)*(log_x_2 - log_x_1) - exp(log_x_2 - log_x_1)){
       result = append(result, exp(log_x_2 - log_x_1))
-      i = i + 1
-    }
-    else{}
-  }
-  list(samples = result, iter = iter)
-}
+      accepted_samples = accepted_samples + 1}}
+  list(samples = result, iter = iter)}
 ```
+
+We then generate samples with our algorithm and conduct tests to check its correctness.
 
 ```{r, echo = T, eval = T}
 alpha = 7.
-G2 = large_gamma(alpha, 10000)
+n = 10000
+G2 = large_gamma(alpha, n) # Generate samples
 cat('Theoretical mean: ', alpha,' Computed mean: ', mean(G2$samples),'\n')
 cat('Theoretical variance: ', alpha, ' Computed variance: ', var(G2$samples))
 ```
@@ -331,71 +332,60 @@ cat('Theoretical variance: ', alpha, ' Computed variance: ', var(G2$samples))
 We see that the computed mean and variance coincide with the theoretical mean and variance.
 
 ```{r, echo = T, eval = T, out.width = "50%", fig.align = "center"}
-df16 = data.frame(data=G2)
+df = data.frame(data=G2)
 
-ggplot(df16, aes(x=data.samples)) + geom_histogram(data=df16, aes(x = data.samples, y=..density.., color="Sampled Function"), binwidth=0.2) + stat_function(fun=dgamma,geom = "line",size=1.6,aes(color='Analytical'),args = list(shape=alpha, rate = 1)) + ggtitle("Gamma pdf - comparison of analytical and sampled density") + labs(x='x', y='density', caption=paste('Comparison of the analytical density of the Gamma(', alpha, ',1) distribution (red line) \n and the sampled density (blue bars).'))
+ggplot(df, aes(x=data.samples)) + geom_histogram(data=df, aes(x = data.samples, y=..density.., color="Sampled Function"), binwidth=0.2) + stat_function(fun=dgamma,geom = "line",size=1.6,aes(color='Analytical'),args = list(shape=alpha, rate = 1)) + ggtitle("Gamma pdf - comparison of analytical and sampled density") + labs(x='x', y='density', caption=paste('Comparison of the analytical density of the Gamma(', alpha, ',1) distribution (red line) \n and the sampled density (blue bars).'))
 ```
 
 From the figure we see that we get the correct distribution when sampling using the ratio of uniforms method.
 
-We wish to investigate in what manner $\alpha$ affects the acceptance probability $P$ of the ratio of uniforms method. We draw $n = 1000$ samples for $\alpha \in (1, 2000]$ and count, for each $\alpha$, the average number of iterations of the rejection sampling algorithm required to sample 1 gamma-distributed variable. The inverse of this will then be an estimate of the acceptance probability. 
+We wish to investigate in what manner $\alpha$ affects the acceptance probability $P$ of the ratio of uniforms method. We draw $n = 1000$ samples for $\alpha \in (2, 2002]$ and count, for each $\alpha$, the average number of iterations of the rejection sampling algorithm required to sample one gamma-distributed variable. The inverse of this will then be an estimate of the acceptance probability. 
 ```{r, echo = T, eval = T, out.width = "50%", fig.align = "center"}
-iterations = c()
+# The following function returns number of iterations required to generate 1000 samples from the large_gamma function
+get_gamma_iterations <- function(alpha){return(large_gamma(alpha,1000)$iter)}
+alpha = seq(2,2002,10) # Specify the alphas
+iterations <- sapply(alpha,get_gamma_iterations) # Compute number of iterations for each alpha
 
-for (alpha in seq(2, 2000, 10)){
-  # Sample 1000 gamma variables for a particular alpha
-  G = large_gamma(alpha, 1000)
-  # Iter is here the average over all 1000 samples
-  iterations = append(iterations, G$iter)
-}
+df = data.frame(alpha = seq(2, 2002, 10), P_estimate = 1000/iterations) # Put data in dataframe to prepare for plotting
 
-df15 = data.frame(alpha = seq(5, 2000, 10), P_estimate = 1000/iterations)
-
-ggplot(df15, aes(x = alpha, y = P_estimate)) + geom_line() + ggtitle("Sampling from the Gamma - acceptance probability") + labs(caption='Estimated acceptance probability as a function of alpha')
+ggplot(df, aes(x = alpha, y = P_estimate)) + geom_line() + ggtitle("Sampling from the Gamma - acceptance probability") + labs(caption='Estimated acceptance probability as a function of alpha')
 ```
-From the plot we see that $P_accept$ decreases with larger $\alpha$ but seems to reach a lower bound as $\alpha$ approaches $2000$. This is as expected; with increasing $\alpha$, the pdf flattens out and the proportion of the area in $[0, a]\times[b_{-}, b_{+}]$ covered by $C_{f}$ is decreased. 
+From the plot we see that $P_accept$ decreases with larger $\alpha$. This is as expected; with increasing $\alpha$, the pdf flattens out and the proportion of the area in $[0, a]\times[b_{-}, b_{+}]$ covered by $C_{f}$ decreases. 
 
-We know have reasonably efficient algorithms for sampling from the Gamma with $\alpha \in (0, 1), \beta = 1$ and $\alpha \in (1, \infty), \beta = 1$. We note that for $\alpha = 1, \beta = 1$, we observe that the pdf of the gamma coincides with the unscaled exponential distribution. We also note that $\beta$ is an inverse scale parameter, and $\frac{1}{\beta}X \sim Gamma(\alpha, \beta)$ if $X \sim (\alpha, 1)$. We use this and our two algorithms to develop a general algorithm for sampling from the gamma. 
+We now have reasonably efficient algorithms for sampling from the Gamma with $\alpha \in (0, 1), \beta = 1$ and $\alpha \in (1, \infty), \beta = 1$. We note that for $\alpha = 1, \beta = 1$, the pdf of the Gamma coincides with the unscaled exponential distribution. We also note that $\beta$ is an inverse scale parameter, and $\frac{1}{\beta}X \sim Gamma(\alpha, \beta)$ if $X \sim Gamma(\alpha, 1)$. We use this and our two algorithms to develop a general algorithm for sampling from the Gamma distribution. 
 
 ```{r, echo = T, eval = T, out.width = "50%", fig.align = "center"}
-#As specified above, gamma2 samples using rejection sampling for alpha < 1
-# and the ratio of uniforms method for alpha > 1. If alpha = 1 we sample
-# from the exponential
-gamma2 = function(alpha, beta=1, n  = 1){
+# As specified above, gamma2 samples using rejection sampling for alpha < 1, and the ratio of uniforms method for alpha > 1. If alpha = 1 we sample from the exponential
+gamma2 = function(alpha, beta = 1, n = 1){
   if (alpha == 1.0){
-    return(list(samples = exponential(beta, n), iter = n))
-  }
+    return(list(samples = exponential(beta, n), iter = n))}
   else if (alpha <= 1){
     G = small_gamma(alpha, n)
     #Insert rate / scale parameters
     G$samples = G$samples / beta
-    return(G)
-  }
+    return(G)}
   else if (alpha > 1){
     G = large_gamma(alpha, n)
     #Insert rate / scale parameters
     G$samples = G$samples / beta
-    return(G)
-  }
-}
+    return(G)}}
 
+n = 10000
 alpha = 1000
 beta = 1
-#Draw samples
-G = gamma2(alpha, beta, 10000)
-df17 <- data.frame(G)
-#Compute the sampled density
-histo = hist(G$samples, plot=F)
+G = gamma2(alpha, beta, n) # Draw samples
+df <- data.frame(G) # Prepare samples for plotting
+histo = hist(G$samples, plot=F) # Compute the sampled density
 #Plot results
-ggplot(df17, aes(x = samples)) + geom_histogram(aes(y = ..density.., color='Sampled'), bins=50) + stat_function(fun=dgamma,geom = "line",size=1.6,aes(color='Analytical'),args = list(shape=alpha, rate=beta)) + ggtitle("The Gamma pdf - comparison of analytical and sampled density for extreme alpha") + ylim(0, 1.1*max(histo$density)) + labs(x='x', y='density', caption=paste('Comparison of the analytical density of the Gamma(', alpha, ',1) distribution (red line) \n and the sampled density (blue bars).'))
+ggplot(df, aes(x = samples)) + geom_histogram(aes(y = ..density.., color='Sampled'), bins=50) + stat_function(fun=dgamma,geom = "line",size=1.6,aes(color='Analytical'),args = list(shape=alpha, rate=beta)) + ggtitle("The Gamma pdf - comparison of analytical and sampled density for extreme alpha") + ylim(0, 1.1*max(histo$density)) + labs(x='x', y='density', caption=paste('Comparison of the analytical density of the Gamma(', alpha, ',1) distribution (red line) \n and the sampled density (blue bars).'))
 ```
-We note that as $\alpha \rightarrow \infty$, as in the figure above, the Gamma pdf approaches a normal pdf as $\alpha \rightarrow \infty$. Taking advantage of this, sophisticated sampling techniques modify samples from the normal when sampling from the Gamma with very large $\alpha$. 
+We note that as $\alpha \rightarrow \infty$, as in the figure above, the Gamma pdf approaches a normal distribution. Taking advantage of this, sophisticated sampling techniques modify samples from the normal when sampling from the Gamma with very large $\alpha$.
 
 
 # Problem C: The Dirichlet distribution: simulation using known relations
 
 ## 1.
-We assume $z_k\sim \Gamma(\alpha_k,1)$ for $k=1,\ldots,K$ independently, and define $x_k = z_k/(z_1+\dots+z_K)$ for $k=1,\ldots,K$. Then we want to find the distribution of $x= (x_1,\ldots,x_K)$. We use a transformation of the joint distribution of $z = (z_1,\ldots,z_K)$ to $(x_1,\ldots,x_{K-1},v), v = z_1+\dots+z_K$. The inverse transformation will be $z_k = vx_k, k = 1,\ldots,K$, which has a Jacobian
+We assume $z_k\sim Gamma(\alpha_k,1)$ for $k=1,\ldots,K$ independently, and define $x_k = z_k/(z_1+\dots+z_K)$ for $k=1,\ldots,K$. Then we want to find the distribution of $x= (x_1,\ldots,x_K)$. We use a transformation of the joint distribution of $z = (z_1,\ldots,z_K)$ to $(x_1,\ldots,x_{K-1},v), v = z_1+\dots+z_K$. The inverse transformation will be $z_k = vx_k, k = 1,\ldots,K$, which has a Jacobian
 $$\lvert J \rvert = \begin{vmatrix}\frac{\partial z_1}{\partial x_1}  & \dots & \frac{\partial z_1}{\partial x_{K-1}} & \frac{\partial z_1}{\partial v}\\ \vdots &  \ddots & \vdots & \vdots \\ \frac{\partial z_K}{\partial x_1} & \dots & \frac{\partial z_K}{\partial x_{K-1}}&\frac{\partial z_K}{\partial v} \end{vmatrix} = \begin{vmatrix}v&0  & \dots & 0 & x_1\\ 0&v&\dots & 0 & x_2\\\vdots &\vdots&  \ddots & \vdots & \vdots \\0 & 0& \dots&v&x_{K-1}\\ -v &-v& \dots & -v&1-\sum_{k=1}^{K-1}x_k  \end{vmatrix} = v^{K-1}.$$
 Then, we note that the joint distribution of $z_k, k = 1,\ldots,K$ will be
 $$F_{z_1,\ldots,z_K}(z_1,\ldots,z_K) = \prod_{k=1}^K \frac{1}{\Gamma(\alpha_k)}z_k^{\alpha_k-1}\exp(-z_k)=\prod_{k=1}^K \bigg(\frac{1}{\Gamma(\alpha_k)}z_k^{\alpha_k-1}\bigg)\exp(-\sum_{k=1}^K z_k).$$
@@ -408,24 +398,22 @@ Finally, we want to find the marginal distribution of $F_{x_1,\ldots,x_{K-1}}(x_
 $$\Gamma(z) = \int_0^\infty \exp(-x)x^{z-1}dx,$$
 which gives $$\int_0^\infty \exp(-v)v^{\big(\sum_{k=1}^K\alpha_k\big)-1}dv = \Gamma(\sum_{k=1}^K\alpha_k),$$
 and in total we have
-$$ F_{x_1,\ldots,x_{K-1}}(x_1,\ldots,x_{K-1})=\bigg(\frac{\Gamma(\sum_{k=1}^K\alpha_k)}{\prod_{k=1}^{K}\Gamma(\alpha_k)}\bigg)\bigg(\prod_{k=1}^{K-1}x_k^{\alpha_k-1}\bigg)\bigg(1-\sum_{k=1}^{K-1}x_k\bigg)^{\alpha_K-1}.$$
+$$ F_{x_1,\ldots,x_{K-1}}(x_1,\ldots,x_{K-1})=\frac{\Gamma(\sum_{k=1}^K\alpha_k)}{\prod_{k=1}^{K}\Gamma(\alpha_k)}\bigg(\prod_{k=1}^{K-1}x_k^{\alpha_k-1}\bigg)\bigg(1-\sum_{k=1}^{K-1}x_k\bigg)^{\alpha_K-1}.$$
 We also know that $\sum_{k=1}^Kx_k=1$, $x_1,\ldots,x_{K-1}>0$ and $\sum_{k=1}^{K-1}x_k<1$, which means that $x=(x_1,\ldots,x_K)$ will be Dirichlet distributed.
 
 ## 2.
 Now we want to implement a function that draws one realization from the Dirichlet distribution with parameter vector $(\alpha_1,\ldots,\alpha_K)$. We do so in the following code.
 ```{r, echo = T, eval = T}
 library(MCMCpack)
-#A function for fetching only the samples, not number of iterations
+#A function for fetching only the samples, not number of iterations from our implemented gamma distribution function
 get_gamma_samples <- function(alpha){
-  return(gamma2(alpha)$samples)
-}
+  return(gamma2(alpha)$samples)}
 
 #Dirichlet sampler, as specified in the text above
 dirichlet <- function(alpha){
   z<- sapply(alpha,get_gamma_samples)
   x <- z/sum(z)
-  return(x)
-}
+  return(x)}
 ```
 We want to test if the function draws from the correct distribution. To do so, we first check the mean and variance of a generated sample. From theory, it is known that if $(x_1,\ldots,x_K)\sim \text{Dirichlet}(\alpha_1,\ldots,\alpha_K)$, then
 $$\text{E}(X_k) = \frac{\alpha_k}{\alpha_0}, \quad \text{Var}(X_i) = \frac{\alpha_i(\alpha_0-\alpha_i)}{\alpha_0^2(\alpha_0+1)}, \quad \alpha_0 = \sum_{i=1}^K \alpha_i.$$
@@ -434,11 +422,12 @@ To determine $(\alpha_1,\ldots,\alpha_k)$, we simulate them from an exponential 
 k = 5
 n = 20000
 x <- matrix(NA, ncol = k, nrow = n)
-#Sample the alphas from the exponential distribution
+# Sample the alphas from the exponential distribution
 alpha <- exponential(1,k)
+# Sample n realizations from the Dirichlet distribution with the given alpha
 for (i in 1:n){
-  x[i,] <- dirichlet(alpha)
-}
+  x[i,] <- dirichlet(alpha)}
+
 cat('Theoretical mean: ', alpha/sum(alpha),'\n','Computed mean: ', apply(x,2,mean),'\n')
 cat('Theoretical variance: ', alpha*(sum(alpha)-alpha)/(sum(alpha)^2*(sum(alpha)+1)),'\n', 'Computed variance: ', apply(x,2,var))
 ```
@@ -456,7 +445,7 @@ rfunc = data.frame(value = y)
 ourfunc = data.frame(value = as.vector(x))
 rfunc$type = 'R function'
 ourfunc$type = 'Our function'
-df = rbind(rfunc,ourfunc)
+df = rbind(rfunc,ourfunc) # Prepare samples for plotting
 ggplot(df, aes(value, fill = type)) + 
    geom_histogram(alpha = 0.5, aes(y = ..density..), position = 'identity') + ggtitle('Comparison of Dirichlet samplers') + labs(x='x', y='density', caption=paste('Comparison of the sampled density of x_k\n sampled from our dirichlet sampler (red bars) and the sampler from MCMpack (blue bars)'))
 ```
@@ -465,7 +454,7 @@ Also here, the histograms coincide well. As a final test, we plot a histogram of
 ```{r, echo = T, eval = T, out.width = "50%", fig.align = "center"}
 df2 <- data.frame(theo=seq(0,max(x[,1]),length.out=n), value=x[,1])
 ggplot(df2, aes(x = value)) + geom_histogram(aes(y = ..density.., colour = "Sampled"), 
-      binwidth = 0.005) + stat_function(fun=dbeta,geom = "line",size=1.6,aes(col="Analytical"),args = list(shape1=1,shape2=k-1)) + ggtitle("Our function vs. analytical density") + labs(x='x', y='density', caption=paste('Comparison of the sampled density of x_1 sampled from our dirichlet sampler (blue bars) and the Beta distribution (red line)'))
+      binwidth = 0.005) + stat_function(fun=dbeta,geom = "line",size=1.6,aes(col="Analytical"),args = list(shape1=1,shape2=k-1)) + ggtitle("Our function vs. analytical density") + labs(x='x', y='density', caption=paste('Comparison of the sampled density of x_1 sampled from our dirichlet sampler (blue bars)\n and the Beta distribution (red line)'))
 ```
 
 The histogram fits the analytical density well, and we conclude that we have implemented the function to generate Dirichlet samples correctly.
@@ -476,16 +465,18 @@ The histogram fits the analytical density well, and we conclude that we have imp
 
 We wish to sample from 
 
-$$ f(\theta \lvert y) \propto (2 + \theta)^{y_1}(1-\theta)^{y_2 + y_3}\theta^{y_4}, \quad \theta \in (0, 1)$$
+$$ f(\theta \lvert \mathbf{y}) \propto (2 + \theta)^{y_1}(1-\theta)^{y_2 + y_3}\theta^{y_4}, \quad \theta \in (0, 1)$$
 
-We construct a rejection sampling algorithm to sample from $f(\theta|y)$ using $U(0,1)$ as the proposal density. We get the following algorithm.
+We construct a rejection sampling algorithm to sample from $f(\theta|\mathbf{y})$ using $U(0,1)$ as the proposal density. The uniform density is nonzero for all points where $f(\theta | \mathbf{y})$ is nonzero. As a result, we can use it as a proposal density. We get the following algorithm.
 ```{r, echo = T, eval = T}
-#The unscaled density. Note that in the text we denote f as the actual density. 
+# The unscaled density. Note that in the text we denote f as the actual density. 
 f <- function(x){
   return((2+x)^125*(1-x)^38*x^34)
 }
-#Find c in f(x) / c g(x)
+#Find c in f(x) / c g(x) by finding the maximum value of f(x). optimum$objective will then equal sup{f(x)}
 optimum = optimize(f,c(0,1),maximum = TRUE)
+
+N_C = integrate(f,0,1)$value # Find the normalizing constant of f
 
 draw_samples <- function(n){
   samples <- rep(NA,n)
@@ -494,36 +485,38 @@ draw_samples <- function(n){
     finish = 0
     while(finish ==0){
       iter = iter + 1
-      x_sample <- runif(1)
-      #Compute acceptance probabilities
+      x_sample <- runif(1) # Sample from proposal density
+      #Compute acceptance probability alpha
       alpha <- f(x_sample)/optimum$objective
+      # Draw uniform variable to determine acceptance
       u = runif(1)
+      # Accept sample if u<alpha
       if (u <=alpha){
         samples[i] <- x_sample
-        finish <- 1
-      }
-    }
-  }
-  return(list(samples = samples, iterations = iter))
-}
+        finish = 1}}}
+  return(list(samples = samples, iterations = iter))}
 ```
 
 ## 2.
 
-Now we want to estimate the posterior mean $\theta$ by Monte-Carlo integration using $M = 10000$ samples from $f(\theta|y)$. We also draw a histogram of the samples and compare it with the analytical density, in addition to marking the estimated posterior mean.
+Now we want to estimate the posterior mean $\theta$ by Monte-Carlo integration using $M = 10000$ samples from $f(\theta|\mathbf{y})$. We also draw a histogram of the samples and compare it with the analytical density, in addition to marking the estimated posterior mean.
 
 ```{r, echo 0 T, eval = T, out.width = "50%", fig.align = "center"}
 n = 10000
-g <- function(x){
-  return(f(x)*x)
-}
+# The following function is integrated from 0 to 1 to find the theoretical mean
+g <- function(x){return(x*f(x))}
+
 #f_density is f / NC, where NC is the normalizing constant of f. 
-f_density <- function(x){return(f(x)/integrate(f,0,1)$value)}
-y <- draw_samples(n)
+f_density <- function(x){return(f(x)/N_C)}
+
+y <- draw_samples(n) # Draw samples from the distribution f(theta|y)
+
 cat("Computed mean: ", sum(y$samples)/n, '\n')
-cat("Theoretical mean: ", integrate(g,0,1)$value/integrate(f,0,1)$value, '\n')
+cat("Theoretical mean: ", integrate(g,0,1)$value/N_C, '\n')
+
 df <- data.frame(theo=seq(0,1,length.out=n), value=y$samples)
-ggplot(df, aes(x = value)) + geom_histogram(aes(y = ..density.., colour = "Sampled"), binwidth=0.001) + stat_function(fun=f_density,geom = "line",size=1.6,aes(colour="Analytical")) + ggtitle("Comparison of analytical and sampled density") + xlim(0,1) + geom_segment(x = sum(y$samples)/n, xend = sum(y$samples)/n, y = 0, yend = 100, aes(colour = "Mean"), size = 1.2, linetype = "longdash") + labs(x='x', y='density', caption=paste('Comparison of the sampled density of x_k sampled from our dirichlet sampler (red bars) and the sampler from MCMpack (blue bars)'))
+
+ggplot(df, aes(x = value)) + geom_histogram(aes(y = ..density.., colour = "Sampled"), binwidth=0.001) + stat_function(fun=f_density,geom = "line",size=1.6,aes(colour="Analytical")) + ggtitle("Comparison of analytical and sampled density") + xlim(0,1) + geom_segment(x = sum(y$samples)/n, xend = sum(y$samples)/n, y = 0, yend = 100, aes(colour = "Mean"), size = 1.2, linetype = "longdash") + labs(x='x', y='density', caption=paste('Comparison of the sampled density of f(theta|y) (blue bars) \n and the analytical density distribution (red line). \n The estimated posterior mean (green line) is indicated.'))
 ```
 
 The theoretical mean is found by numerically integrating $\text{E}(X) = \int_0^1 x f(x)dx$, and we see that it coincides well with the estimated posterior mean. From the figure we see that the density of the sample in the histogram also coincides well with the analytical density distribution, so we conclude that the sampling algorithm is correct. Also, the indicated estimated posterior mean looks reasonable, considering the density distribution.
@@ -533,18 +526,14 @@ In theory, we would expect the rejection sampling algorithm to generate $c \geq 
 
 ```{r, echo = T, eval = T}
 cat("Average random numbers generated: ", y$iterations/n, '\n')
-cat("Theoretical expected number: ", optimum$objective/integrate(f,0,1)$value)
+cat("Theoretical expected number: ", optimum$objective/N_C)
 ```
 
 Again, we see that the average number from the sample coincide well with the theoretical expected number.
 
 ## 4.
 
-We now wish to estimate the posterior mean of $\theta$ when we assume the new prior
-$$\pi_{new} = Beta(1,5).$$
-
-We then get the new posterior pdf
-
+We now wish to estimate the posterior mean of $\theta$ when we assume the new prior $\pi_{new} = Beta(1,5)$. We then get the new posterior pdf
 $$ f_{new}(\theta \lvert \mathbf{y}) \propto (2 + \theta)^{y_1} ( 1 - \theta)^{y_2 + y_3}\theta^{y_4} \frac{\Gamma(1+5)}{\Gamma(1) \Gamma(5)} \theta^{0} (1-\theta)^{4}.$$
 
 We want to estimate the mean of $\theta$, $E[\theta]$. To be computationally efficient, we may wish to use importance sampling on the batch of samples already generated under the uniform prior. Using $f_{new}$ as the target density and $f_{old},$
@@ -561,33 +550,30 @@ $$ \hat{\mu}_{IS} = \frac{1}{n} \sum \theta_i w_i.$$
 ```{r, echo = T, eval = T}
 #The new unscaled posterior target pdf, NC * f_new
 unscaled_posterior_target = function(x){
-  return(f_density(x)*dbeta(x, 1, 5))
-}
+  return(f_density(x)*dbeta(x, 1, 5))}
 
 #Compute the normalizing constant of f_new
 NC_posterior = integrate(unscaled_posterior_target, 0, 1)$value
 
 #Normalized new posterior target pdf, f_new
 posterior_target = function(x){
-  return(unscaled_posterior_target(x) / NC_posterior) 
-}
+  return(unscaled_posterior_target(x) / NC_posterior)}
 
 #The density of x, f_new(x) * x
 posterior_target_mean_density = function(x){
-  return(x * posterior_target(x))
-}
+  return(x * posterior_target(x))}
 
 theoretical_mean = integrate(posterior_target_mean_density, 0, 1)$value
 
 weights = posterior_target(y$samples) / f_density(y$samples)
-posterior_mean = sum(y$samples*weights) / (n)
+posterior_mean = sum(y$samples*weights) / n
 cat("IS posterior mean estimate:", posterior_mean, "\n")
 cat("Analytical posterior mean:", theoretical_mean)
 ```
 
 We see that the IS posterior mean estimate is close to the analytical mean. We suspect that the target and proposal densities are sufficiently close such that the bias introduced by estimating the new mean based on the already generated samples is sufficiently small. 
 
-We have here computed the normalizing constant of the posterior. If this were not numerically feasible, we could use the self-normalizing importance sampling estimate of the posterior mean
+We have here computed the normalizing constant of the posterior. If this was not numerically feasible, we could use the self-normalizing importance sampling estimate of the posterior mean
 
 $$ \tilde{\mu}_{IS} = \frac{\sum \theta_i w_i }{\sum w_i}.$$
 
