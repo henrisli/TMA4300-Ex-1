@@ -339,7 +339,7 @@ ggplot(df, aes(x=data.samples)) + geom_histogram(data=df, aes(x = data.samples, 
 
 From the figure we see that we get the correct distribution when sampling using the ratio of uniforms method.
 
-We wish to investigate in what manner $\alpha$ affects the acceptance probability $P$ of the ratio of uniforms method. We draw $n = 1000$ samples for $\alpha \in (2, 2002]$ and count, for each $\alpha$, the average number of iterations of the rejection sampling algorithm required to sample one gamma-distributed variable. The inverse of this will then be an estimate of the acceptance probability. 
+We wish to investigate in what manner $\alpha$ affects the acceptance probability $P$ of the ratio of uniforms method. We draw $n = 1000$ samples for $\alpha_i \in \{2, 12, 22, ... , 2002\}$ and count, for each $\alpha$, the average number of iterations of the rejection sampling algorithm required to sample one gamma-distributed variable. The inverse of this will then be an estimate of the acceptance probability. 
 ```{r, echo = T, eval = T, out.width = "50%", fig.align = "center"}
 # The following function returns number of iterations required to generate 1000 samples from the large_gamma function
 get_gamma_iterations <- function(alpha){return(large_gamma(alpha,1000)$iter)}
