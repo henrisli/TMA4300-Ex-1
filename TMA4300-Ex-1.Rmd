@@ -436,7 +436,7 @@ To determine $(\alpha_1,\ldots,\alpha_k)$, we simulate them from an exponential 
 k = 5
 n = 20000
 x <- matrix(NA, ncol = k, nrow = n)
-#Sample the alphas from the exponentila distribution
+#Sample the alphas from the exponential distribution
 alpha <- exponential(1,k)
 for (i in 1:n){
   x[i,] <- dirichlet(alpha)
