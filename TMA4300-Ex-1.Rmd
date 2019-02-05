@@ -549,7 +549,7 @@ $$w_i = f_{new}(\theta_i \lvert y) / f_{old}(\theta_i \lvert y) \propto  \pi_n(\
 
 The importance sampling posterior mean becomes 
 $$ \hat{\mu}_{IS} = \frac{1}{n} \sum \theta_i w_i.$$
-
+We compute the IS posterior mean estimate. 
 ```{r, echo = T, eval = T}
 #The new unscaled posterior target pdf, NC * f_new
 unscaled_posterior_target = function(x){
@@ -568,6 +568,7 @@ posterior_target_mean_density = function(x){
 
 theoretical_mean = integrate(posterior_target_mean_density, 0, 1)$value
 
+#Calculate the weights
 weights = posterior_target(y$samples) / f(y$samples)
 posterior_mean = sum(y$samples*weights) / n
 cat("IS posterior mean estimate:", posterior_mean, "\n")
@@ -579,7 +580,7 @@ We see that the IS posterior mean estimate is close to the analytical mean. The 
 We have here computed the normalizing constant of the posterior. If this was not numerically feasible, we could use the self-normalizing importance sampling estimate of the posterior mean
 
 $$ \tilde{\mu}_{IS} = \frac{\sum \theta_i w_i }{\sum w_i}.$$
-
+We compute the self-normalizing IS posterior mean estimate. 
 ```{r}
 unscaled_weights = unscaled_posterior_target(y$samples) / f_unscaled(y$samples)
 posterior_mean_SN = sum(y$samples*unscaled_weights) / (sum(unscaled_weights))
